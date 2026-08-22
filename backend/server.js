@@ -3,7 +3,6 @@ import express from "express";
 import cors from "cors";
 
 import authRoutes from "./routes/auth.js";
-import authMiddleware from "./middleware/authMiddleware.js"
 
 const app = express();
 const PORT = process.env.PORT || 5000;
