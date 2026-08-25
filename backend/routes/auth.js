@@ -5,6 +5,7 @@ import { sendOtpEmail } from "../utils/emailService.js";
 import bcrypt from "bcryptjs"
 import { createSession, FAKE_PASSWORD_HASH, generateAccessToken, generateRefreshToken, setAccessTokenCookie, setRefreshTokenCookie } from "../utils/tokenService.js";
 import { loginRateLimitPerEmail, loginRateLimitPerIp } from "../middleware/rateLimiter.js";
+import { authMiddleware } from "../middleware/authMiddleware.js";
 
 const router = Router();
 
@@ -187,6 +188,20 @@ router.post("/login", loginRateLimitPerIp(), loginRateLimitPerEmail(), async (re
     }
 })
 
+
+router.get("/me",authMiddleware, async (req, res) => {
+    const userId = req.userId
+    const user = await prisma.user.findUnique({
+        where:{
+            id: userId
+        },
+        select:{
+            id: true,
+            email:true
+        }
+    })
+    return res.status(200).json({user})
+})
 
 
 export default router;
