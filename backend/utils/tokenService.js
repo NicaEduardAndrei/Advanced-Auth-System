@@ -3,6 +3,8 @@ import crypto from "crypto"
 import prisma from "./prisma.js"
 import { hashOtp } from "./otpService.js"
 
+export const FAKE_PASSWORD_HASH = "$2b$12$8u8Yp7qfV9mHq3yTg2a0uO1aCjV8qf8iYp8xFfV3ZrYgE.4m7t1gVx0t" 
+
 export function generateAccessToken(user) {
 
     const token = jwt.sign(
@@ -20,7 +22,7 @@ export function generateRefreshToken() {
 }
 
 
-export async function createSession(userId, refreshToken, req) {
+export async function createSession(user, refreshToken, req) {
     const hashedRefreshToken = hashOtp(refreshToken)
     const ip = req.ip
     const userAgent = req.headers["user-agent"]
@@ -28,7 +30,7 @@ export async function createSession(userId, refreshToken, req) {
 
     const session = await prisma.session.create({
         data: {
-            userId: userId,
+            userId: user.id,
             refreshToken: hashedRefreshToken,
             userAgent: userAgent,
             ip: ip,

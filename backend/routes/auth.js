@@ -3,7 +3,8 @@ import prisma from "../utils/prisma.js";
 import { generateOtp, hashOtp, verifyOtp } from "../utils/otpService.js";
 import { sendOtpEmail } from "../utils/emailService.js";
 import bcrypt from "bcryptjs"
-import { createSession, generateAccessToken, generateRefreshToken, setAccessTokenCookie, setRefreshTokenCookie } from "../utils/tokenService.js";
+import { createSession, FAKE_PASSWORD_HASH, generateAccessToken, generateRefreshToken, setAccessTokenCookie, setRefreshTokenCookie } from "../utils/tokenService.js";
+import { loginRateLimitPerEmail, loginRateLimitPerIp } from "../middleware/rateLimiter.js";
 
 const router = Router();
 
@@ -133,7 +134,7 @@ router.post("/register", async (req, res) => {
 
         const accessToken = generateAccessToken(user)
         const refreshToken = generateRefreshToken()
-        await createSession(user.id, refreshToken, req)
+        await createSession(user, refreshToken, req)
         setAccessTokenCookie(res, accessToken)
         setRefreshTokenCookie(res, refreshToken)
 
@@ -145,6 +146,42 @@ router.post("/register", async (req, res) => {
                 email: user.email
             }
         })
+    } catch (error) {
+        return res.status(500).json({ error })
+    }
+})
+
+
+router.post("/login", loginRateLimitPerIp(), loginRateLimitPerEmail(), async (req, res) => {
+
+    try {
+        const { email, password } = req.body
+
+        if (!email || !password) {
+            return res.status(400).json({ message: "Email and password is required" })
+        }
+
+        const user = await prisma.user.findUnique({
+            where: {
+                email: email
+            }
+        })
+
+        const passwordToCompare = user ? user.password : FAKE_PASSWORD_HASH
+        const isValid = await bcrypt.compare(password, passwordToCompare)
+
+        if (!user || !isValid) {
+            return res.status(400).json({ message: "Invalid email or password" })
+        }
+
+        const accessToken = generateAccessToken(user)
+        const refreshToken = generateRefreshToken()
+        await createSession(user, refreshToken, req)
+        setRefreshTokenCookie(res, refreshToken)
+        setAccessTokenCookie(res, accessToken)
+
+        return res.status(200).json({ message: "Login succesfully" })
+
     } catch (error) {
         return res.status(500).json({ error })
     }
