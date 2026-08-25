@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken"
 import crypto from "crypto"
-import prisma from "./prisma"
-import { hashOtp } from "./otpService"
+import prisma from "./prisma.js"
+import { hashOtp } from "./otpService.js"
 
 export function generateAccessToken(user) {
 
@@ -45,6 +45,18 @@ export function setRefreshTokenCookie(res, refreshToken){
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
+        path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000
+    })
+}
+
+
+export function setAccessTokenCookie(res, accessToken){
+    res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 15 * 60 * 1000
     })
 }
