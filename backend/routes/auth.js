@@ -189,18 +189,70 @@ router.post("/login", loginRateLimitPerIp(), loginRateLimitPerEmail(), async (re
 })
 
 
-router.get("/me",authMiddleware, async (req, res) => {
+router.post("/refresh", async (req, res) => {
+
+    try {
+        const refreshToken = req.cookies.refreshToken
+        if (!refreshToken) {
+            return res.status(401).json({ message: "Must provide a refreshToken" })
+        }
+
+        const session = await prisma.session.findFirst({
+            where: {
+                refreshToken: hashOtp(refreshToken),
+                revoked: false,
+                expiresAt: {
+                    gt: new Date()
+                }
+            }
+        })
+
+        if (!session) {
+            return res.status(401).json({ message: "Must provide a refreshToken" })
+        }
+
+        const user = await prisma.user.findUnique({
+            where: {
+                id: session.userId
+            }
+        })
+
+        const accessToken = generateAccessToken(user)
+        const newRefreshToken = generateRefreshToken()
+
+        await prisma.session.update({
+            where: {
+                refreshToken: hashOtp(refreshToken)
+            },
+            data: {
+                refreshToken: hashOtp(newRefreshToken),
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            }
+        })
+
+        setAccessTokenCookie(res, accessToken)
+        setRefreshTokenCookie(res, newRefreshToken)
+
+        return res.status(200).json({ message: "Token refreshed" })
+    } catch (error) {
+        return res.status(500).json({ error })
+    }
+
+})
+
+
+router.get("/me", authMiddleware, async (req, res) => {
     const userId = req.userId
     const user = await prisma.user.findUnique({
-        where:{
+        where: {
             id: userId
         },
-        select:{
+        select: {
             id: true,
-            email:true
+            email: true
         }
     })
-    return res.status(200).json({user})
+    return res.status(200).json({ user })
 })
 
 
