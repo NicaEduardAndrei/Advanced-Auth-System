@@ -3,7 +3,7 @@ import crypto from "crypto"
 import prisma from "./prisma.js"
 import { hashOtp } from "./otpService.js"
 
-export const FAKE_PASSWORD_HASH = "$2b$12$8u8Yp7qfV9mHq3yTg2a0uO1aCjV8qf8iYp8xFfV3ZrYgE.4m7t1gVx0t" 
+export const FAKE_PASSWORD_HASH = "$2b$12$8u8Yp7qfV9mHq3yTg2a0uO1aCjV8qf8iYp8xFfV3ZrYgE.4m7t1gVx0t"
 
 export function generateAccessToken(user) {
 
@@ -42,8 +42,8 @@ export async function createSession(user, refreshToken, req) {
 }
 
 
-export function setRefreshTokenCookie(res, refreshToken){
-    res.cookie("refreshToken" , refreshToken, {
+export function setRefreshTokenCookie(res, refreshToken) {
+    res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
@@ -53,12 +53,27 @@ export function setRefreshTokenCookie(res, refreshToken){
 }
 
 
-export function setAccessTokenCookie(res, accessToken){
+export function setAccessTokenCookie(res, accessToken) {
     res.cookie("accessToken", accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
         maxAge: 15 * 60 * 1000
+    })
+}
+
+
+export function deleteTokensCookie(res) {
+    res.clearCookie("accessToken", {
+        path: "/",
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production"
+    })
+
+    res.clearCookie("refreshToken", {
+        path: "/",
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production"
     })
 }
