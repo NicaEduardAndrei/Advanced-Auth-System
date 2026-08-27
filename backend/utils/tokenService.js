@@ -8,7 +8,7 @@ export const FAKE_PASSWORD_HASH = "$2b$12$8u8Yp7qfV9mHq3yTg2a0uO1aCjV8qf8iYp8xFf
 export function generateAccessToken(user) {
 
     const token = jwt.sign(
-        { sub: user.id },
+        { sub: user.id , tokenVersion: user.tokenVersion},
         process.env.JWT_ACCESS_SECRET,
         { expiresIn: "15m" }
     )

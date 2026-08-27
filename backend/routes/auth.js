@@ -289,4 +289,143 @@ router.get("/me", authMiddleware, async (req, res) => {
 })
 
 
+router.post("/password-reset/send-code",
+    sendCodeRateLimitPerIp(),
+    sendCodeRateLimitPerEmail(),
+    sendCodeCooldownLimitPerEmail(),
+    async (req, res) => {
+        try {
+            const { email } = req.body
+
+            if (!email) {
+                return res.status(400).json({ message: "Email required!" })
+            }
+
+            const code = generateOtp()
+            const hash = hashOtp(code)
+            const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+
+            const { data, error: emailError } = await sendOtpEmail(email, code, "PASSWORD_RESET");
+
+            if (emailError) {
+                return res.status(500).json({ message: "Email not sent. Try again!" });
+            }
+
+            await prisma.otp.updateMany({
+                where: {
+                    email: email,
+                    purpose: "PASSWORD_RESET",
+                    used: false
+                },
+                data: {
+                    used: true
+                }
+            })
+
+            await prisma.otp.create({
+                data: {
+                    email: email,
+                    purpose: "PASSWORD_RESET",
+                    tokenHash: hash,
+                    expiresAt: expiresAt
+                }
+            })
+
+            return res.status(200).json({ message: "If this email exists, you will receive a reset code" })
+
+        } catch (error) {
+            return res.status(500).json({ error })
+        }
+    })
+
+
+router.post("/password-reset", async (req, res) => {
+    try {
+        const { email, code, newPassword, destroySessions } = req.body
+        if (!email || !code || !newPassword) {
+            return res.status(400).json({ message: "Must provide a valid email, code and password" })
+        }
+
+        const otp = await prisma.otp.findFirst({
+            where: {
+                email: email,
+                purpose: "PASSWORD_RESET",
+                used: false,
+                expiresAt: {
+                    gt: new Date()
+                },
+                attempts: {
+                    lt: 5
+                }
+            }
+        })
+        if (!otp) {
+            return res.status(400).json({ message: "Invalid or expired code" })
+        }
+
+        if (!verifyOtp(code, otp.tokenHash)) {
+            await prisma.otp.update({
+                where: {
+                    id: otp.id
+                },
+                data: {
+                    attempts: {
+                        increment: 1
+                    }
+                }
+            })
+            return res.status(400).json({ message: "Invalid or expired code" })
+        }
+
+        await prisma.otp.update({
+            where: {
+                id: otp.id
+            },
+            data: {
+                used: true
+            }
+        })
+
+        const hashedPassword = await bcrypt.hash(newPassword, 12)
+
+        const user = await prisma.user.update({
+            where: {
+                email: email
+            },
+            data: {
+                password: hashedPassword
+            }
+        })
+
+        if (destroySessions === true) {
+            await prisma.session.updateMany({
+                where: {
+                    userId: user.id,
+                    revoked: false
+                },
+                data: {
+                    revoked: true
+                }
+            })
+
+            await prisma.user.update({
+                where: {
+                    id: user.id
+                },
+                data: {
+                    tokenVersion: {
+                        increment: 1
+                    }
+                }
+            })
+        }
+
+        return res.status(200).json({ message: "Password reset successfully" })
+
+    } catch (error) {
+        console.error("Password reset error:", error)
+        return res.status(500).json({ error })
+    }
+})
+
 export default router;

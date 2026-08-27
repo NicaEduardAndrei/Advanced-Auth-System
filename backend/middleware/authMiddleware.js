@@ -17,7 +17,7 @@ export async function authMiddleware(req, res, next) {
             }
         })
 
-        if (!user) {
+        if (!user || jwtToken.tokenVersion !== user.tokenVersion) {
             return res.status(401).json({ message: "A valid token is required" })
         }
         req.userId = jwtToken.sub
