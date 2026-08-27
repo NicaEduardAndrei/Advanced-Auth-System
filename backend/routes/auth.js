@@ -38,24 +38,26 @@ router.post("/register/send-code",
                 return res.status(500).json({ message: "Email not sent. Try again!" });
             }
 
-            await prisma.otp.updateMany({
-                where: {
-                    email: email,
-                    purpose: "EMAIL_VERIFY",
-                    used: false
-                },
-                data: {
-                    used: true
-                }
-            })
+            await prisma.$transaction(async (tx) => {
+                await tx.otp.updateMany({
+                    where: {
+                        email: email,
+                        purpose: "EMAIL_VERIFY",
+                        used: false
+                    },
+                    data: {
+                        used: true
+                    }
+                })
 
-            await prisma.otp.create({
-                data: {
-                    email: email,
-                    purpose: "EMAIL_VERIFY",
-                    tokenHash: hash,
-                    expiresAt: expiresAt
-                }
+                await tx.otp.create({
+                    data: {
+                        email: email,
+                        purpose: "EMAIL_VERIFY",
+                        tokenHash: hash,
+                        expiresAt: expiresAt
+                    }
+                })
             })
 
             return res.status(200).json({ message: "Code sent succesfully" })
@@ -117,28 +119,31 @@ router.post("/register", async (req, res) => {
             return res.status(400).json({ message: "Invalid code" })
         }
 
-        await prisma.otp.update({
-            where: {
-                id: otp.id
-            },
-            data: {
-                used: true
-            }
-        })
-
         const hashedPassword = await bcrypt.hash(password, 12)
+        const refreshToken = generateRefreshToken()
 
-        const user = await prisma.user.create({
-            data: {
-                email: email,
-                password: hashedPassword,
-            }
+        const result = await prisma.$transaction(async (tx) => {
+            await tx.otp.update({
+                where: {
+                    id: otp.id
+                },
+                data: {
+                    used: true
+                }
+            })
+
+            const user = await tx.user.create({
+                data: {
+                    email: email,
+                    password: hashedPassword,
+                }
+            })
+
+            await createSession(user, refreshToken, req, tx)
+            return { user }
         })
 
-
-        const accessToken = generateAccessToken(user)
-        const refreshToken = generateRefreshToken()
-        await createSession(user, refreshToken, req)
+        const accessToken = generateAccessToken(result.user)
         setAccessTokenCookie(res, accessToken)
         setRefreshTokenCookie(res, refreshToken)
 
@@ -146,8 +151,8 @@ router.post("/register", async (req, res) => {
         return res.status(200).json({
             message: "Registration successful",
             user: {
-                id: user.id,
-                email: user.email
+                id: result.user.id,
+                email: result.user.email
             }
         })
     } catch (error) {
@@ -311,24 +316,26 @@ router.post("/password-reset/send-code",
                 return res.status(500).json({ message: "Email not sent. Try again!" });
             }
 
-            await prisma.otp.updateMany({
-                where: {
-                    email: email,
-                    purpose: "PASSWORD_RESET",
-                    used: false
-                },
-                data: {
-                    used: true
-                }
-            })
+            await prisma.$transaction(async (tx) => {
+                await tx.otp.updateMany({
+                    where: {
+                        email: email,
+                        purpose: "PASSWORD_RESET",
+                        used: false
+                    },
+                    data: {
+                        used: true
+                    }
+                })
 
-            await prisma.otp.create({
-                data: {
-                    email: email,
-                    purpose: "PASSWORD_RESET",
-                    tokenHash: hash,
-                    expiresAt: expiresAt
-                }
+                await tx.otp.create({
+                    data: {
+                        email: email,
+                        purpose: "PASSWORD_RESET",
+                        tokenHash: hash,
+                        expiresAt: expiresAt
+                    }
+                })
             })
 
             return res.status(200).json({ message: "If this email exists, you will receive a reset code" })
@@ -377,48 +384,52 @@ router.post("/password-reset", async (req, res) => {
             return res.status(400).json({ message: "Invalid or expired code" })
         }
 
-        await prisma.otp.update({
-            where: {
-                id: otp.id
-            },
-            data: {
-                used: true
-            }
-        })
-
         const hashedPassword = await bcrypt.hash(newPassword, 12)
 
-        const user = await prisma.user.update({
-            where: {
-                email: email
-            },
-            data: {
-                password: hashedPassword
+        await prisma.$transaction(async (tx) => {
+
+            await tx.otp.update({
+                where: {
+                    id: otp.id
+                },
+                data: {
+                    used: true
+                }
+            })
+
+            const user = await tx.user.update({
+                where: {
+                    email: email
+                },
+                data: {
+                    password: hashedPassword
+                }
+            })
+
+            if (destroySessions === true) {
+                await tx.session.updateMany({
+                    where: {
+                        userId: user.id,
+                        revoked: false
+                    },
+                    data: {
+                        revoked: true
+                    }
+                })
+
+                await tx.user.update({
+                    where: {
+                        id: user.id
+                    },
+                    data: {
+                        tokenVersion: {
+                            increment: 1
+                        }
+                    }
+                })
             }
         })
 
-        if (destroySessions === true) {
-            await prisma.session.updateMany({
-                where: {
-                    userId: user.id,
-                    revoked: false
-                },
-                data: {
-                    revoked: true
-                }
-            })
-
-            await prisma.user.update({
-                where: {
-                    id: user.id
-                },
-                data: {
-                    tokenVersion: {
-                        increment: 1
-                    }
-                }
-            })
-        }
 
         return res.status(200).json({ message: "Password reset successfully" })
 

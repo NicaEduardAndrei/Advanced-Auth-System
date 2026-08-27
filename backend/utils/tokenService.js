@@ -8,7 +8,7 @@ export const FAKE_PASSWORD_HASH = "$2b$12$8u8Yp7qfV9mHq3yTg2a0uO1aCjV8qf8iYp8xFf
 export function generateAccessToken(user) {
 
     const token = jwt.sign(
-        { sub: user.id , tokenVersion: user.tokenVersion},
+        { sub: user.id, tokenVersion: user.tokenVersion },
         process.env.JWT_ACCESS_SECRET,
         { expiresIn: "15m" }
     )
@@ -22,13 +22,14 @@ export function generateRefreshToken() {
 }
 
 
-export async function createSession(user, refreshToken, req) {
+export async function createSession(user, refreshToken, req, tx) {
     const hashedRefreshToken = hashOtp(refreshToken)
     const ip = req.ip
     const userAgent = req.headers["user-agent"]
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    const db = tx || prisma
 
-    const session = await prisma.session.create({
+    const session = await db.session.create({
         data: {
             userId: user.id,
             refreshToken: hashedRefreshToken,
