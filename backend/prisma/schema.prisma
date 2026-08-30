@@ -17,7 +17,7 @@ model User {
   password          String
   tokenVersion      Int       @default(1)
   is2FAEnabled      Boolean   @default(false)
-  twoFactorMethod   String?
+  twoFactorMethod   String?   // "email" | "totp" | "both"
   totpSecret        String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

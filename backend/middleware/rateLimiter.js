@@ -62,3 +62,24 @@ export function sendCodeCooldownLimitPerEmail() {
         }
     })
 }
+
+
+export function twoFactorRateLimitPerId() {
+    return rateLimit({
+        windowMs: 60 * 60 * 1000,
+        max: 6,
+        message: "Too many requests. Please try again in an hour",
+        keyGenerator: (req, res) => {
+            return req.userId
+        }
+    })
+}
+
+
+export function twoFactorRateLimitPerIp() {
+    return rateLimit({
+        windowMs: 60 * 60 * 1000,
+        max: 10,
+        message: "Too many requests. Please try again in an hour",
+    })
+}

@@ -4,8 +4,10 @@ import { generateOtp, hashOtp, verifyOtp } from "../utils/otpService.js";
 import { sendOtpEmail } from "../utils/emailService.js";
 import bcrypt from "bcryptjs"
 import { createSession, deleteTokensCookie, FAKE_PASSWORD_HASH, generateAccessToken, generateRefreshToken, setAccessTokenCookie, setRefreshTokenCookie } from "../utils/tokenService.js";
-import { loginRateLimitPerEmail, loginRateLimitPerIp, sendCodeRateLimitPerIp, sendCodeRateLimitPerEmail, sendCodeCooldownLimitPerEmail } from "../middleware/rateLimiter.js";
+import { loginRateLimitPerEmail, loginRateLimitPerIp, sendCodeRateLimitPerIp, sendCodeRateLimitPerEmail, sendCodeCooldownLimitPerEmail, twoFactorRateLimitPerIp, twoFactorRateLimitPerId } from "../middleware/rateLimiter.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
+import { generateSecret, verify, generateURI } from "otplib";
+import CryptoJS from "crypto-js";
 
 const router = Router();
 
@@ -438,5 +440,277 @@ router.post("/password-reset", async (req, res) => {
         return res.status(500).json({ error })
     }
 })
+
+
+router.post("/2fa/enable",
+    authMiddleware,
+    twoFactorRateLimitPerId(),
+    twoFactorRateLimitPerIp(),
+    async (req, res) => {
+        try {
+            const userId = req.userId
+            const { method } = req.body
+
+            if (!method || (method != "email" && method != "totp")) {
+                return res.status(400).json({ message: "Must provide a valid method" })
+            }
+
+            const user = await prisma.user.findUnique({
+                where: {
+                    id: userId
+                }
+            })
+
+            if (method === "email") {
+                if (user.twoFactorMethod === "email" || user.twoFactorMethod === "both") {
+                    return res.status(400).json({ message: "Email 2FA already enabled" })
+                }
+
+                const emailCode = generateOtp()
+
+                const { data, error: emailError } = await sendOtpEmail(user.email, emailCode, "EMAIL_2FA");
+
+                if (emailError) {
+                    return res.status(500).json({ message: "Email not sent. Try again!" });
+                }
+
+                await prisma.$transaction(async (tx) => {
+                    await tx.otp.updateMany({
+                        where: {
+                            userId: user.id,
+                            purpose: "EMAIL_2FA"
+                        },
+                        data: {
+                            used: true
+                        }
+                    })
+
+                    await tx.otp.create({
+                        data: {
+                            email: user.email,
+                            userId: user.id,
+                            purpose: "EMAIL_2FA",
+                            tokenHash: hashOtp(emailCode),
+                            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+                        }
+                    })
+                })
+
+                return res.status(200).json({ message: "Email code in order to verify 2fa was sent to your email" })
+            }
+
+            if (method === "totp") {
+                if (user.twoFactorMethod === "totp" || user.twoFactorMethod === "both") {
+                    return res.status(400).json({ message: "Totp 2FA already enabled" })
+                }
+
+                const secret = generateSecret()
+                const encryptedSecret = CryptoJS.AES.encrypt(secret, process.env.TOTP_SECRET).toString()
+                const URI = generateURI({
+                    secret,
+                    label: user.email,
+                    issuer: "Nica Andrei - Auth Project"
+                })
+
+                await prisma.user.update({
+                    where: {
+                        id: userId
+                    },
+                    data: {
+                        totpSecret: encryptedSecret
+                    }
+                })
+                return res.status(200).json({ URI })
+            }
+        } catch (error) {
+            return res.status(500).json({ error })
+        }
+    })
+
+
+router.post("/2fa/confirm-2fa-totp-enable",
+    authMiddleware,
+    twoFactorRateLimitPerId(),
+    twoFactorRateLimitPerIp(),
+    async (req, res) => {
+        try {
+            const userId = req.userId
+            const { code } = req.body
+
+            if (!code) {
+                return res.status(400).json({ message: "Invalid code" })
+            }
+            const user = await prisma.user.findUnique({
+                where: {
+                    id: userId
+                }
+            })
+
+            if (!user.totpSecret) {
+                return res.status(400).json({ message: "Missing totp key, must request totp enable first" })
+            }
+            if (user.twoFactorMethod === "both") {
+                return res.status(400).json({ message: "Both 2FA methods already enabled" })
+            }
+            if (user.twoFactorMethod === "totp") {
+                return res.status(400).json({ message: "Totp 2FA already enabled" })
+            }
+
+            const decryptedSecret = CryptoJS.AES.decrypt(user.totpSecret, process.env.TOTP_SECRET).toString(CryptoJS.enc.Utf8)
+
+            const result = await verify({ token: code, secret: decryptedSecret, epochTolerance: 1 })
+
+            if (!result.valid) {
+                return res.status(400).json({ message: "Invalid code" })
+            }
+
+            if (user.twoFactorMethod === null) {
+                await prisma.user.update({
+                    where: {
+                        id: userId
+                    },
+                    data: {
+                        is2FAEnabled: true,
+                        twoFactorMethod: "totp"
+                    }
+                })
+                return res.status(200).json({ message: "Totp 2FA enabled" })
+            }
+
+            if (user.twoFactorMethod === "email") {
+                await prisma.user.update({
+                    where: {
+                        id: userId
+                    },
+                    data: {
+                        is2FAEnabled: true,
+                        twoFactorMethod: "both"
+                    }
+                })
+                return res.status(200).json({ message: "Totp 2FA enabled" })
+            }
+
+        } catch (error) {
+            return res.status(500).json({ error })
+        }
+    })
+
+
+router.post("/2fa/confirm-2fa-email-enable",
+    authMiddleware,
+    twoFactorRateLimitPerId(),
+    twoFactorRateLimitPerIp(),
+    async (req, res) => {
+        try {
+
+            const { userId } = req
+            const { code } = req.body
+
+            if (!code) {
+                return res.status(400).json({ message: "Invalid code" })
+            }
+            const user = await prisma.user.findUnique({
+                where: {
+                    id: userId
+                }
+            })
+
+            if (user.twoFactorMethod === "both") {
+                return res.status(400).json({ message: "Both 2FA methods already enabled" })
+            }
+            if (user.twoFactorMethod === "email") {
+                return res.status(400).json({ message: "Email 2FA already enabled" })
+            }
+
+            const otp = await prisma.otp.findFirst({
+                where: {
+                    userId: user.id,
+                    purpose: "EMAIL_2FA",
+                    used: false,
+                    expiresAt: {
+                        gt: new Date()
+                    },
+                    attempts: {
+                        lt: 5
+                    }
+                }
+            })
+
+            if (!otp) {
+                return res.status(400).json({ message: "Invalid code" })
+            }
+
+            if (otp.tokenHash !== hashOtp(code)) {
+                await prisma.otp.update({
+                    where: {
+                        id: otp.id
+                    },
+                    data: {
+                        attempts: {
+                            increment: 1
+                        }
+                    }
+                })
+
+                return res.status(400).json({ message: "Invalid code" })
+            }
+
+            if (user.twoFactorMethod === null) {
+
+                await prisma.$transaction(async (tx) => {
+                    await tx.otp.updateMany({
+                        where: {
+                            id: otp.id,
+                            purpose: "EMAIL_2FA"
+                        },
+                        data: {
+                            used: true
+                        }
+                    })
+
+                    await tx.user.update({
+                        where: {
+                            id: user.id,
+                        },
+                        data: {
+                            is2FAEnabled: true,
+                            twoFactorMethod: "email"
+                        }
+                    })
+                })
+
+            }
+
+            if (user.twoFactorMethod === "totp") {
+                await prisma.$transaction(async (tx) => {
+                    await tx.otp.updateMany({
+                        where: {
+                            id: otp.id,
+                            purpose: "EMAIL_2FA"
+                        },
+                        data: {
+                            used: true
+                        }
+                    })
+
+                    await tx.user.update({
+                        where: {
+                            id: user.id,
+                        },
+                        data: {
+                            is2FAEnabled: true,
+                            twoFactorMethod: "both"
+                        }
+                    })
+                })
+            }
+
+            return res.status(200).json({ message: "Email 2FA enabled" })
+
+        } catch (error) {
+            return res.status(500).json({ error })
+        }
+    }
+)
 
 export default router;
