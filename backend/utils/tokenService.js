@@ -15,6 +15,15 @@ export function generateAccessToken(user) {
     return token
 }
 
+export function generatePendingToken(user) {
+    const token = jwt.sign(
+        { sub: user.id, tokenVersion: user.tokenVersion },
+        process.env.JWT_PENDING_SECRET,
+        { expiresIn: "5m" }
+    )
+    return token
+}
+
 
 export function generateRefreshToken() {
     const refreshToken = crypto.randomBytes(40).toString("hex")
@@ -54,6 +63,17 @@ export function setRefreshTokenCookie(res, refreshToken) {
 }
 
 
+export function setPendingTokenCookie(res, pendingToken) {
+    res.cookie("pendingToken", pendingToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 5 * 60 * 1000
+    })
+}
+
+
 export function setAccessTokenCookie(res, accessToken) {
     res.cookie("accessToken", accessToken, {
         httpOnly: true,
@@ -73,6 +93,21 @@ export function deleteTokensCookie(res) {
     })
 
     res.clearCookie("refreshToken", {
+        path: "/",
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production"
+    })
+
+    res.clearCookie("pendingToken", {
+        path: "/",
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production"
+    })
+}
+
+
+export function deletePendingToken(res){
+    res.clearCookie("pendingToken", {
         path: "/",
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production"
