@@ -16,13 +16,21 @@ model User {
   email             String    @unique
   password          String
   tokenVersion      Int       @default(1)
-  is2FAEnabled      Boolean   @default(false)
-  twoFactorMethod   String?   // "email" | "totp" | "both"
   totpSecret        String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+
+  twoFactorMethod   TwoFactorMethod @default(NONE)
+
   otps              Otp[]
   sessions          Session[]
+}
+
+enum TwoFactorMethod {
+  NONE
+  EMAIL
+  TOTP
+  BOTH
 }
 
 model Otp{
