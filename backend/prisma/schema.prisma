@@ -38,14 +38,22 @@ model Otp{
   email             String
   userId            String?
   user              User? @relation(fields: [userId], references: [id])
-  purpose           String  // "EMAIL_VERIFY" | "EMAIL_2FA" | "PASSWORD_RESET"
   tokenHash         String
   expiresAt         DateTime
   attempts          Int @default(0)
   used              Boolean @default(false)
   createdAt         DateTime @default(now())
 
+  purpose           OtpPurpose
+
   @@index([email, purpose])
+}
+
+enum OtpPurpose {
+  EMAIL_REGISTER_VERIFY
+  EMAIL_ENABLE_2FA
+  EMAIL_LOGIN_2FA
+  EMAIL_PASSWORD_RESET
 }
 
 model Session{

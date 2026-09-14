@@ -6,13 +6,16 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function sendOtpEmail(toEmail, otpCode, purpose) {
     let subject = ""
     let title = ""
-    if (purpose === "EMAIL_VERIFY") {
+    if (purpose === "EMAIL_REGISTER_VERIFY") {
         subject = "Verify your email address"
         title = "Welcome! Your verify code is:"
-    } else if (purpose === "EMAIL_2FA") {
+    } else if (purpose === "EMAIL_LOGIN_2FA") {
         subject = "Your 2FA authentification code"
         title = "Your authentification code is:"
-    } else if (purpose === "PASSWORD_RESET") {
+    } else if (purpose === "EMAIL_ENABLE_2FA") {
+        subject = "Your 2FA authentification code"
+        title = "Your authentification code in order to enable 2FA is:"
+    } else if (purpose === "EMAIL_PASSWORD_RESET") {
         subject = "Password reset"
         title = "Your password reset code is:"
     } else {
@@ -34,7 +37,7 @@ export async function sendOtpEmail(toEmail, otpCode, purpose) {
   `
     });
 
-    return {data,error}
+    return { data, error }
 }
 
 

@@ -35,7 +35,7 @@ router.post("/register/send-code",
             const hash = hashOtp(code)
             const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
-            const { data, error: emailError } = await sendOtpEmail(email, code, "EMAIL_VERIFY");
+            const { data, error: emailError } = await sendOtpEmail(email, code, "EMAIL_REGISTER_VERIFY");
 
             if (emailError) {
                 return res.status(500).json({ message: "Email not sent. Try again!" });
@@ -45,7 +45,7 @@ router.post("/register/send-code",
                 await tx.otp.updateMany({
                     where: {
                         email: email,
-                        purpose: "EMAIL_VERIFY",
+                        purpose: "EMAIL_REGISTER_VERIFY",
                         used: false
                     },
                     data: {
@@ -56,7 +56,7 @@ router.post("/register/send-code",
                 await tx.otp.create({
                     data: {
                         email: email,
-                        purpose: "EMAIL_VERIFY",
+                        purpose: "EMAIL_REGISTER_VERIFY",
                         tokenHash: hash,
                         expiresAt: expiresAt
                     }
@@ -92,7 +92,7 @@ router.post("/register", async (req, res) => {
         const otp = await prisma.otp.findFirst({
             where: {
                 email: email,
-                purpose: "EMAIL_VERIFY",
+                purpose: "EMAIL_REGISTER_VERIFY",
                 used: false,
                 expiresAt: {
                     gt: new Date()
@@ -201,7 +201,7 @@ router.post("/login",
             if (user.twoFactorMethod === "EMAIL") {
                 const emailCode = generateOtp()
 
-                const { data, error: emailError } = await sendOtpEmail(user.email, emailCode, "EMAIL_2FA");
+                const { data, error: emailError } = await sendOtpEmail(user.email, emailCode, "EMAIL_LOGIN_2FA");
 
                 if (emailError) {
                     return res.status(500).json({ message: "Email not sent. Try again!" });
@@ -211,7 +211,7 @@ router.post("/login",
                     await tx.otp.updateMany({
                         where: {
                             userId: user.id,
-                            purpose: "EMAIL_2FA"
+                            purpose: "EMAIL_LOGIN_2FA"
                         },
                         data: {
                             used: true
@@ -222,7 +222,7 @@ router.post("/login",
                         data: {
                             email: user.email,
                             userId: user.id,
-                            purpose: "EMAIL_2FA",
+                            purpose: "EMAIL_LOGIN_2FA",
                             tokenHash: hashOtp(emailCode),
                             expiresAt: new Date(Date.now() + 15 * 60 * 1000),
                         }
@@ -275,7 +275,7 @@ router.post("/2fa/verify",
                 const otp = await prisma.otp.findFirst({
                     where: {
                         userId: user.id,
-                        purpose: "EMAIL_2FA",
+                        purpose: "EMAIL_LOGIN_2FA",
                         used: false,
                         expiresAt: {
                             gt: new Date()
@@ -307,7 +307,7 @@ router.post("/2fa/verify",
                 await prisma.otp.updateMany({
                     where: {
                         userId: user.id,
-                        purpose: "EMAIL_2FA"
+                        purpose: "EMAIL_LOGIN_2FA"
                     },
                     data: {
                         used: true
@@ -375,7 +375,7 @@ router.post("/2fa/send-login-email-code",
             }
 
             const emailCode = generateOtp()
-            const { data, error: emailError } = await sendOtpEmail(user.email, emailCode, "EMAIL_2FA");
+            const { data, error: emailError } = await sendOtpEmail(user.email, emailCode, "EMAIL_LOGIN_2FA");
 
             if (emailError) {
                 return res.status(500).json({ message: "Email not sent. Try again!" });
@@ -385,7 +385,7 @@ router.post("/2fa/send-login-email-code",
                 await tx.otp.updateMany({
                     where: {
                         userId: user.id,
-                        purpose: "EMAIL_2FA"
+                        purpose: "EMAIL_LOGIN_2FA"
                     },
                     data: {
                         used: true
@@ -396,7 +396,7 @@ router.post("/2fa/send-login-email-code",
                     data: {
                         email: user.email,
                         userId: user.id,
-                        purpose: "EMAIL_2FA",
+                        purpose: "EMAIL_LOGIN_2FA",
                         tokenHash: hashOtp(emailCode),
                         expiresAt: new Date(Date.now() + 15 * 60 * 1000),
                     }
@@ -523,7 +523,7 @@ router.post("/password-reset/send-code",
             const hash = hashOtp(code)
             const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
-            const { data, error: emailError } = await sendOtpEmail(email, code, "PASSWORD_RESET");
+            const { data, error: emailError } = await sendOtpEmail(email, code, "EMAIL_PASSWORD_RESET");
 
             if (emailError) {
                 return res.status(500).json({ message: "Email not sent. Try again!" });
@@ -533,7 +533,7 @@ router.post("/password-reset/send-code",
                 await tx.otp.updateMany({
                     where: {
                         email: email,
-                        purpose: "PASSWORD_RESET",
+                        purpose: "EMAIL_PASSWORD_RESET",
                         used: false
                     },
                     data: {
@@ -544,7 +544,7 @@ router.post("/password-reset/send-code",
                 await tx.otp.create({
                     data: {
                         email: email,
-                        purpose: "PASSWORD_RESET",
+                        purpose: "EMAIL_PASSWORD_RESET",
                         tokenHash: hash,
                         expiresAt: expiresAt
                     }
@@ -569,7 +569,7 @@ router.post("/password-reset", async (req, res) => {
         const otp = await prisma.otp.findFirst({
             where: {
                 email: email,
-                purpose: "PASSWORD_RESET",
+                purpose: "EMAIL_PASSWORD_RESET",
                 used: false,
                 expiresAt: {
                     gt: new Date()
@@ -679,7 +679,7 @@ router.post("/2fa/enable",
 
                 const emailCode = generateOtp()
 
-                const { data, error: emailError } = await sendOtpEmail(user.email, emailCode, "EMAIL_2FA");
+                const { data, error: emailError } = await sendOtpEmail(user.email, emailCode, "EMAIL_ENABLE_2FA");
 
                 if (emailError) {
                     return res.status(500).json({ message: "Email not sent. Try again!" });
@@ -689,7 +689,7 @@ router.post("/2fa/enable",
                     await tx.otp.updateMany({
                         where: {
                             userId: user.id,
-                            purpose: "EMAIL_2FA"
+                            purpose: "EMAIL_ENABLE_2FA"
                         },
                         data: {
                             used: true
@@ -700,7 +700,7 @@ router.post("/2fa/enable",
                         data: {
                             email: user.email,
                             userId: user.id,
-                            purpose: "EMAIL_2FA",
+                            purpose: "EMAIL_ENABLE_2FA",
                             tokenHash: hashOtp(emailCode),
                             expiresAt: new Date(Date.now() + 15 * 60 * 1000),
                         }
@@ -834,7 +834,7 @@ router.post("/2fa/confirm-2fa-email-enable",
             const otp = await prisma.otp.findFirst({
                 where: {
                     userId: user.id,
-                    purpose: "EMAIL_2FA",
+                    purpose: "EMAIL_ENABLE_2FA",
                     used: false,
                     expiresAt: {
                         gt: new Date()
@@ -870,7 +870,7 @@ router.post("/2fa/confirm-2fa-email-enable",
                     await tx.otp.updateMany({
                         where: {
                             id: otp.id,
-                            purpose: "EMAIL_2FA"
+                            purpose: "EMAIL_ENABLE_2FA"
                         },
                         data: {
                             used: true
@@ -894,7 +894,7 @@ router.post("/2fa/confirm-2fa-email-enable",
                     await tx.otp.updateMany({
                         where: {
                             id: otp.id,
-                            purpose: "EMAIL_2FA"
+                            purpose: "EMAIL_ENABLE_2FA"
                         },
                         data: {
                             used: true
