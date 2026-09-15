@@ -27,7 +27,7 @@ router.post("/register/send-code",
         })
 
         if (user) {
-            return res.status(400).json({ message: "This email is already registered!" })
+            return res.status(200).json({ message: "If this email is available, a verification code has been sent" })
         }
 
         const code = generateOtp()
@@ -62,7 +62,7 @@ router.post("/register/send-code",
             })
         })
 
-        return res.status(200).json({ message: "Code sent succesfully" })
+        return res.status(200).json({ message: "If this email is available, a verification code has been sent" })
     })
 
 
@@ -71,16 +71,6 @@ router.post("/register", async (req, res) => {
 
     if (!email || !password || !code) {
         return res.status(400).json({ message: "Must provide email, password and code" })
-    }
-
-    const alreadyRegistered = await prisma.user.findUnique({
-        where: {
-            email: email
-        }
-    })
-
-    if (alreadyRegistered) {
-        return res.status(400).json({ message: "Already registered" })
     }
 
     const otp = await prisma.otp.findFirst({
@@ -114,6 +104,16 @@ router.post("/register", async (req, res) => {
         })
 
         return res.status(400).json({ message: "Invalid code" })
+    }
+
+    const alreadyRegistered = await prisma.user.findUnique({
+        where: {
+            email: email
+        }
+    })
+
+    if (alreadyRegistered) {
+        return res.status(409).json({ message: "Email already registered" })
     }
 
     const hashedPassword = await bcrypt.hash(password, 12)
@@ -162,7 +162,7 @@ router.post("/login",
         const { email, password } = req.body
 
         if (!email || !password) {
-            return res.status(400).json({ message: "Email and password is required" })
+            return res.status(400).json({ message: "Email and password are required" })
         }
 
         const user = await prisma.user.findUnique({
@@ -185,7 +185,7 @@ router.post("/login",
             setRefreshTokenCookie(res, refreshToken)
             setAccessTokenCookie(res, accessToken)
 
-            return res.status(200).json({ message: "Login succesfully" })
+            return res.status(200).json({ message: "Login successfully" })
         }
 
         if (user.twoFactorMethod === "EMAIL") {
@@ -305,7 +305,7 @@ router.post("/2fa/verify",
             setAccessTokenCookie(res, accessToken)
             deletePendingToken(res)
 
-            return res.status(200).json({ message: "Login succesfully" })
+            return res.status(200).json({ message: "Login successfully" })
         }
 
         if (method === "totp" && (user.twoFactorMethod === "BOTH" || user.twoFactorMethod === "TOTP")) {
@@ -328,7 +328,7 @@ router.post("/2fa/verify",
             setAccessTokenCookie(res, accessToken)
             deletePendingToken(res)
 
-            return res.status(200).json({ message: "Login succesfully" })
+            return res.status(200).json({ message: "Login successfully" })
         }
 
         return res.status(400).json({ message: "Invalid method" })
@@ -387,7 +387,7 @@ router.post("/2fa/send-login-email-code",
 router.post("/refresh", async (req, res) => {
     const refreshToken = req.cookies.refreshToken
     if (!refreshToken) {
-        return res.status(401).json({ message: "Must provide a refreshToken" })
+        return res.status(401).json({ message: "Refresh token missing" })
     }
 
     const session = await prisma.session.findFirst({
@@ -401,7 +401,7 @@ router.post("/refresh", async (req, res) => {
     })
 
     if (!session) {
-        return res.status(401).json({ message: "Must provide a refreshToken" })
+        return res.status(401).json({ message: "Invalid or expired refresh token" })
     }
 
     const user = await prisma.user.findUnique({
@@ -621,7 +621,7 @@ router.post("/2fa/enable",
 
         if (method === "email") {
             if (user.twoFactorMethod === "EMAIL" || user.twoFactorMethod === "BOTH") {
-                return res.status(400).json({ message: "Email 2FA already enabled" })
+                return res.status(409).json({ message: "Email 2FA already enabled" })
             }
 
             const emailCode = generateOtp()
@@ -654,12 +654,12 @@ router.post("/2fa/enable",
                 })
             })
 
-            return res.status(200).json({ message: "Email code in order to verify 2fa was sent to your email" })
+            return res.status(200).json({ message: "Verification code sent to your email" })
         }
 
         if (method === "totp") {
             if (user.twoFactorMethod === "TOTP" || user.twoFactorMethod === "BOTH") {
-                return res.status(400).json({ message: "Totp 2FA already enabled" })
+                return res.status(409).json({ message: "Totp 2FA already enabled" })
             }
 
             const secret = generateSecret()
@@ -704,10 +704,10 @@ router.post("/2fa/confirm-2fa-totp-enable",
             return res.status(400).json({ message: "Missing totp key, must request totp enable first" })
         }
         if (user.twoFactorMethod === "BOTH") {
-            return res.status(400).json({ message: "Both 2FA methods already enabled" })
+            return res.status(409).json({ message: "Both 2FA methods already enabled" })
         }
         if (user.twoFactorMethod === "TOTP") {
-            return res.status(400).json({ message: "Totp 2FA already enabled" })
+            return res.status(409).json({ message: "Totp 2FA already enabled" })
         }
 
         const decryptedSecret = CryptoJS.AES.decrypt(user.totpSecret, process.env.TOTP_SECRET).toString(CryptoJS.enc.Utf8)
@@ -762,10 +762,10 @@ router.post("/2fa/confirm-2fa-email-enable",
         })
 
         if (user.twoFactorMethod === "BOTH") {
-            return res.status(400).json({ message: "Both 2FA methods already enabled" })
+            return res.status(409).json({ message: "Both 2FA methods already enabled" })
         }
         if (user.twoFactorMethod === "EMAIL") {
-            return res.status(400).json({ message: "Email 2FA already enabled" })
+            return res.status(409).json({ message: "Email 2FA already enabled" })
         }
 
         const otp = await prisma.otp.findFirst({
@@ -786,7 +786,7 @@ router.post("/2fa/confirm-2fa-email-enable",
             return res.status(400).json({ message: "Invalid code" })
         }
 
-        if (otp.tokenHash !== hashOtp(code)) {
+        if (!verifyOtp(code, otp.tokenHash)) {
             await prisma.otp.update({
                 where: {
                     id: otp.id
