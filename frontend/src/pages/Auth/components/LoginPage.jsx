@@ -1,8 +1,56 @@
+import { useState } from "react"
+import "./LoginPage.css"
+import { login } from "../../../api/auth"
 
-export default function LoginPage(){
-    return(
+export default function LoginPage({ setOption }) {
+
+    const [email, setEmail] = useState("")
+    const [password, setPassword] = useState("")
+    const [error, setError] = useState("")
+    const [message, setMessage] = useState("")
+
+    const handleSubmit = async (e) => {
+        e.preventDefault()
+        try {
+            const res = await login(email, password)
+
+            if(res.method){
+                setMessage("")
+                setError(`requires ${res.method} 2fa`)
+            } else {
+                setError("")
+                setMessage(res.message)
+            }
+        }
+        catch (err) {
+            setMessage("")
+            setError(err.message)
+        }
+    }
+
+    return (
         <>
-        <p>Login</p>
+            <form onSubmit={handleSubmit} className="login-container">
+                <span>Log in</span>
+                <input type="email" placeholder="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)} />
+                <input type="password" placeholder="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                />
+                <span style={{ color: "rgb(255, 0, 0)" }}>{error}</span>
+                <span style={{ color: "rgb(0, 112, 0)" }}>{message}</span>
+                <button type="submit">
+                    Log in
+                </button>
+                <span className="go-to-signup">
+                    You dont have an account?
+                    <span onClick={() => setOption("signup")}>
+                        Sign up!
+                    </span>
+                </span>
+            </form>
         </>
     )
 }
