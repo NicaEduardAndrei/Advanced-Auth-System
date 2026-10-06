@@ -1,7 +1,7 @@
 .signup-container {
     display: flex;
     background-color: rgba(0, 0, 0, 0);
-    height: 200px;
+    height: 250px;
     box-sizing: border-box;
     flex-direction: column;
     justify-content: center;

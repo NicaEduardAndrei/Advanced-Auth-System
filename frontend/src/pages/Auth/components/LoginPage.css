@@ -1,7 +1,7 @@
 .login-container {
     display: flex;
     background-color: rgba(0, 0, 0, 0);
-    height: 200px;
+    height: 250px;
     box-sizing: border-box;
     flex-direction: column;
     justify-content: center;
@@ -16,6 +16,10 @@
     height: 20px;
     outline: none;
     padding: 2px 5px;
+}
+
+.login-container button{
+    margin-top: 55px;
 }
 
 .go-to-signup{
