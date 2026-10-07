@@ -11,3 +11,11 @@ export const registerEmailCode = (email) => {
 export const register = (email, password, code) => {
     return backendAPI.post("/api/auth/register", { email, password, code })
 }
+
+export const logout = () =>{
+    return backendAPI.post("/api/auth/logout")
+}
+
+export const getMe = () =>{
+    return backendAPI.get('/api/auth/me')
+}
