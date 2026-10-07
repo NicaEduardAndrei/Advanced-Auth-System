@@ -1,5 +1,7 @@
 import { useState } from "react"
-import { register, registerEmailCode } from "../../../api/auth"
+import { register, registerEmailCode, getMe } from "../../../api/auth"
+import { useAuth } from "../../../context/AuthContext"
+import { useNavigate } from "react-router-dom"
 
 import "./SignUpPage.css"
 
@@ -11,6 +13,9 @@ export default function SignUpPage({ setOption }) {
     const [error, setError] = useState("")
     const [message, setMessage] = useState("")
     const [codeSent, setCodeSent] = useState(false)
+
+    const navigate = useNavigate()
+    const {setUser} = useAuth()
 
     const handleSendCode = async (e) => {
         e.preventDefault()
@@ -33,6 +38,9 @@ export default function SignUpPage({ setOption }) {
             const res = await register(email, password, code)
             setError("")
             setMessage(res.message)
+            const me = await getMe()
+            setUser(me.user)
+            navigate("/home")
         }
         catch (err) {
             setMessage("")

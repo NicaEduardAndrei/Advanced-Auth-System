@@ -1,6 +1,8 @@
 import { useState } from "react"
 import "./LoginPage.css"
-import { login } from "../../../api/auth"
+import { getMe, login } from "../../../api/auth"
+import { useNavigate } from "react-router-dom"
+import { useAuth } from "../../../context/AuthContext"
 
 export default function LoginPage({ setOption }) {
 
@@ -8,6 +10,9 @@ export default function LoginPage({ setOption }) {
     const [password, setPassword] = useState("")
     const [error, setError] = useState("")
     const [message, setMessage] = useState("")
+
+    const {setUser} = useAuth()
+    const navigate = useNavigate()
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -20,6 +25,10 @@ export default function LoginPage({ setOption }) {
             } else {
                 setError("")
                 setMessage(res.message)
+
+                const me = await getMe()
+                setUser(me.user)
+                navigate("/home")
             }
         }
         catch (err) {
