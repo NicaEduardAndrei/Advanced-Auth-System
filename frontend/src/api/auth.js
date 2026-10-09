@@ -24,6 +24,6 @@ export const sendLoginEmailCode = () => {
     return backendAPI.post("/api/auth/2fa/send-login-email-code")
 }
 
-export const loginViaEmail = (method, code) => {
+export const loginVia2FA = (method, code) => {
     return backendAPI.post("/api/auth/2fa/verify", { method, code })
 }

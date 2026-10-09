@@ -1,6 +1,6 @@
 import { useState } from "react"
 import "./LoginPage.css"
-import { getMe, login, loginViaEmail, sendLoginEmailCode } from "../../../api/auth"
+import { getMe, login, loginVia2FA, sendLoginEmailCode } from "../../../api/auth"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../../../context/AuthContext"
 
@@ -11,6 +11,7 @@ export default function LoginPage({ setOption }) {
     const [error, setError] = useState("")
     const [message, setMessage] = useState("")
     const [need2FA, setNeed2FA] = useState(null)
+    const [fullBack, setFullBack] = useState(true)
     const [code, setCode] = useState("")
 
     const { setUser } = useAuth()
@@ -22,6 +23,11 @@ export default function LoginPage({ setOption }) {
             const res = await login(email, password)
 
             if (res.method) {
+                if(res.method === "both"){
+                    setFullBack(false)
+                } else {
+                    setFullBack(true)
+                }
                 setNeed2FA(res.method)
             } else {
                 setError("")
@@ -42,7 +48,7 @@ export default function LoginPage({ setOption }) {
         handleEmail2FALogin: async (e) => {
             e.preventDefault()
             try {
-                const res = await loginViaEmail(need2FA, code)
+                const res = await loginVia2FA("email", code)
                 const me = await getMe()
                 setUser(me.user)
                 setMessage(res.message)
@@ -67,6 +73,21 @@ export default function LoginPage({ setOption }) {
         }
     }
 
+    const handleTotpLogin = async (e) => {
+        e.preventDefault()
+        try {
+            const res = await loginVia2FA("totp", code)
+            const me = await getMe()
+            setError("")
+            setMessage(res.message)
+            setUser(me.user)
+            navigate("/home")
+
+        } catch (err) {
+            setMessage("")
+            setError(err.message)
+        }
+    }
 
 
     return (
@@ -96,11 +117,30 @@ export default function LoginPage({ setOption }) {
             </>}
 
 
+            {need2FA === "both" && <>
+                <div className="login-container">
+                    <span>
+                        Choose 2FA option
+                    </span>
+                    <button onClick={() => {
+                        setNeed2FA("email")
+                        emailMethods.sendCode()
+                    }}>
+                        Email
+                    </button>
+                    <button onClick={() => {
+                        setNeed2FA("totp")
+                    }}>
+                        Authentification app
+                    </button>
+                    <button style={{ width: "50px" }} type="button" onClick={() => { setNeed2FA(null), setFullBack(true), setError(""), setMessage("") }}>BACK</button>
+                </div>
+            </>}
 
 
             {need2FA === "email" && <>
                 <form onSubmit={emailMethods.handleEmail2FALogin} className="login-container">
-                    <span>
+                    <span style={{ fontSize: "15px" }}>
                         Enter the code received on your email address
                     </span>
                     <input
@@ -118,7 +158,48 @@ export default function LoginPage({ setOption }) {
                             Login
                         </button>
                     </div>
+                    <button style={{ width: "50px" }} type="button" onClick={() => { 
+                        if(fullBack=== true){
+                            setNeed2FA(null)
+                        } else{
+                            setNeed2FA("both")
+                        }
+                        setError("")
+                        setMessage("") 
+                        
+                        }}>BACK</button>
                 </form>
+            </>}
+
+
+
+
+            {need2FA === "totp" && <>
+                <form onSubmit={handleTotpLogin} className="login-container">
+                    <span style={{ fontSize: "15px" }}>
+                        Enter the code from your Authentificator app
+                    </span>
+                    <input placeholder="CODE"
+                        value={code}
+                        onChange={(e) => { setCode(e.target.value) }}
+                    />
+                    <span style={{ color: "rgb(255, 0, 0)" }}>{error}</span>
+                    <span style={{ color: "rgb(0, 112, 0)" }}>{message}</span>
+                    <button type="submit">
+                        Login
+                    </button>
+                    <button style={{ width: "50px" }} type="button" onClick={() => { 
+                        if(fullBack=== true){
+                            setNeed2FA(null)
+                        } else{
+                            setNeed2FA("both")
+                        }
+                        setError("")
+                        setMessage("") 
+                        
+                        }}>BACK</button>
+                </form>
+
             </>}
 
 
