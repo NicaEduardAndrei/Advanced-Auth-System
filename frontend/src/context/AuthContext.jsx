@@ -13,6 +13,7 @@ export function AuthProvider({ children }) {
                 const res = await getMe()
                 setUser(res.user)
             }
+            // eslint-disable-next-line no-unused-vars
             catch (err) {
                 setUser(null)
             }
@@ -30,6 +31,7 @@ export function AuthProvider({ children }) {
     )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
     return useContext(AuthContext)
 }
