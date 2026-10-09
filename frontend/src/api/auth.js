@@ -12,10 +12,18 @@ export const register = (email, password, code) => {
     return backendAPI.post("/api/auth/register", { email, password, code })
 }
 
-export const logout = () =>{
+export const logout = () => {
     return backendAPI.post("/api/auth/logout")
 }
 
-export const getMe = () =>{
+export const getMe = () => {
     return backendAPI.get('/api/auth/me')
+}
+
+export const sendLoginEmailCode = () => {
+    return backendAPI.post("/api/auth/2fa/send-login-email-code")
+}
+
+export const loginViaEmail = (method, code) => {
+    return backendAPI.post("/api/auth/2fa/verify", { method, code })
 }
