@@ -27,3 +27,15 @@ export const sendLoginEmailCode = () => {
 export const loginVia2FA = (method, code) => {
     return backendAPI.post("/api/auth/2fa/verify", { method, code })
 }
+
+export const requestEnable2FA = (method) =>{
+    return backendAPI.post("/api/auth/2fa/enable", {method})
+}
+
+export const enableEmail2FA = (code) =>{
+    return backendAPI.post("/api/auth/2fa/confirm-2fa-email-enable", {code})
+}
+
+export const enableTotp2FA = (code) =>{
+    return backendAPI.post("/api/auth/2fa/confirm-2fa-totp-enable", {code})
+}

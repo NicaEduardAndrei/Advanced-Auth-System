@@ -17,6 +17,7 @@ export default function AuthPage() {
         if (!isLoading && user) {
             navigate("/home")
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isLoading, user])
 
     if(isLoading){
