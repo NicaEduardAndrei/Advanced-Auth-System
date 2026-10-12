@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 
-
+import ResetPasswordPage from "./components/ResetPasswordPage"
 import LoginPage from "./components/LoginPage"
 import SignUpPage from "./components/SignUpPage"
 import "./AuthPage.css"
@@ -17,19 +17,23 @@ export default function AuthPage() {
         if (!isLoading && user) {
             navigate("/home")
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isLoading, user])
 
-    if(isLoading){
+    if (isLoading) {
         return <div>Loading...</div>
     }
 
     return (
         <div className="auth-container">
-            <div className="auth-slider" style={{ transform: option === "login" ? "translateX(0)" : "translateX(-50%)" }}>
-                <LoginPage option={option} setOption={setOption} />
-                <SignUpPage option={option} setOption={setOption} />
-            </div>
+            {option === "resetPassword" ? <>
+                <ResetPasswordPage option={option} setOption={setOption} />
+            </> : <>
+                <div className="auth-slider" style={{ transform: option === "login" ? "translateX(0)" : "translateX(-50%)" }}>
+                    <LoginPage option={option} setOption={setOption} />
+                    <SignUpPage option={option} setOption={setOption} />
+                </div>
+            </>}
         </div>
     )
 }

@@ -23,7 +23,7 @@ export default function LoginPage({ setOption }) {
             const res = await login(email, password)
 
             if (res.method) {
-                if(res.method === "both"){
+                if (res.method === "both") {
                     setFullBack(false)
                 } else {
                     setFullBack(true)
@@ -108,6 +108,12 @@ export default function LoginPage({ setOption }) {
                         Log in
                     </button>
                     <span className="go-to-signup">
+                        Forgot your password?
+                        <span onClick={() => setOption("resetPassword")}>
+                            Reset password!
+                        </span>
+                    </span>
+                    <span className="go-to-signup">
                         You dont have an account?
                         <span onClick={() => setOption("signup")}>
                             Sign up!
@@ -158,16 +164,16 @@ export default function LoginPage({ setOption }) {
                             Login
                         </button>
                     </div>
-                    <button style={{ width: "50px" }} type="button" onClick={() => { 
-                        if(fullBack=== true){
+                    <button style={{ width: "50px" }} type="button" onClick={() => {
+                        if (fullBack === true) {
                             setNeed2FA(null)
-                        } else{
+                        } else {
                             setNeed2FA("both")
                         }
                         setError("")
-                        setMessage("") 
-                        
-                        }}>BACK</button>
+                        setMessage("")
+
+                    }}>BACK</button>
                 </form>
             </>}
 
@@ -188,16 +194,16 @@ export default function LoginPage({ setOption }) {
                     <button type="submit">
                         Login
                     </button>
-                    <button style={{ width: "50px" }} type="button" onClick={() => { 
-                        if(fullBack=== true){
+                    <button style={{ width: "50px" }} type="button" onClick={() => {
+                        if (fullBack === true) {
                             setNeed2FA(null)
-                        } else{
+                        } else {
                             setNeed2FA("both")
                         }
                         setError("")
-                        setMessage("") 
-                        
-                        }}>BACK</button>
+                        setMessage("")
+
+                    }}>BACK</button>
                 </form>
 
             </>}
