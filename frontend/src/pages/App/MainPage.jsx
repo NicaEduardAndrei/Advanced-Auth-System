@@ -1,5 +1,5 @@
 import { useAuth } from "../../context/AuthContext"
-import { logout } from "../../api/auth"
+import { logout, resetPassword, sendPasswordResetCode } from "../../api/auth"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { QRCodeSVG } from 'qrcode.react'
@@ -13,11 +13,18 @@ export default function MainPage() {
   const [emailCode, setEmailCode] = useState("")
   const [totpCode, setTotpCode] = useState("")
 
+  const [passwordCode, setPasswordCode] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+
+  const [destroySessions, setDestroySessions] = useState(false)
+
   const [errorEmail2FA, setErrorEmail2FA] = useState("")
   const [messageEmail2FA, setMessageEmail2FA] = useState("")
   const [errorTotp2FA, setErrorTotp2FA] = useState("")
   const [messageTotp2FA, setMessageTotp2FA] = useState("")
   const [errorLogout, setErrorLogout] = useState("")
+  const [messageResetPassword, setMessageResetPassword] = useState("")
+  const [errorResetPassword, setErrorResetPassword] = useState("")
 
   const { user, setUser } = useAuth()
 
@@ -66,7 +73,7 @@ export default function MainPage() {
         const res = await enableEmail2FA(code)
         setErrorEmail2FA("")
         setMessageEmail2FA(res.message)
-      } else if (method === "totp"){
+      } else if (method === "totp") {
         const res = await enableTotp2FA(code)
         setErrorTotp2FA("")
         setMessageTotp2FA(res.message)
@@ -75,10 +82,37 @@ export default function MainPage() {
       if (method === "email") {
         setMessageEmail2FA("")
         setErrorEmail2FA(err.message)
-      } else if (method === "totp"){
+      } else if (method === "totp") {
         setMessageTotp2FA("")
         setErrorTotp2FA(err.message)
       }
+    }
+  }
+
+  const sendResetCode = async () => {
+    try {
+      const res = await sendPasswordResetCode(user.email, "true")
+      setErrorResetPassword("")
+      setMessageResetPassword(res.message)
+    } catch (err) {
+      setMessageResetPassword("")
+      setErrorResetPassword(err.message)
+    }
+
+  }
+
+  const passwordReset = async () => {
+    try {
+      const res = await resetPassword(user.email, passwordCode, newPassword, destroySessions, "true")
+      setErrorResetPassword("")
+      setMessageResetPassword(res.message)
+      if (destroySessions === true) {
+        setUser(null)
+        navigate("/")
+      }
+    } catch (err) {
+      setMessageResetPassword("")
+      setErrorResetPassword(err.message)
     }
   }
 
@@ -109,7 +143,7 @@ export default function MainPage() {
             value={emailCode}
             onChange={(e) => { setEmailCode(e.target.value) }}
           />
-          <button onClick={()=>{confirm2FA("email", emailCode)}}>Confirm</button>
+          <button onClick={() => { confirm2FA("email", emailCode) }}>Confirm</button>
         </div>
 
 
@@ -127,7 +161,7 @@ export default function MainPage() {
             value={totpCode}
             onChange={(e) => { setTotpCode(e.target.value) }}
           />
-          <button onClick={()=>{confirm2FA("totp", totpCode)}}>Confirm</button>
+          <button onClick={() => { confirm2FA("totp", totpCode) }}>Confirm</button>
           {URI ? <>
             <QRCodeSVG value={URI} size={100} style={{ marginLeft: "90px", marginTop: "15px" }} />
             <p style={{ fontSize: "15px" }}>{secret}</p>
@@ -136,6 +170,37 @@ export default function MainPage() {
               <QRCodeSVG size={100} style={{ marginLeft: "90px", marginTop: "15px", filter: "blur(4px)" }} />
             </>}
         </div>
+      </div>
+
+
+
+
+
+
+      <div>
+        <p>Password reset: </p>
+        <div style={{ marginBottom: "10px" }}>
+          <button onClick={sendResetCode}>Send code</button>
+          <input placeholder="enter the code from email"
+            value={passwordCode}
+            onChange={(e) => { setPasswordCode(e.target.value) }}
+          />
+        </div>
+        <div>
+
+          <span>Logout everywhere?</span>
+          <input type="checkbox" checked={destroySessions}
+            value={destroySessions}
+            onChange={() => { setDestroySessions(!destroySessions) }}
+          />
+        </div>
+        <input placeholder="new password" type="password"
+          value={newPassword}
+          onChange={(e) => { setNewPassword(e.target.value) }}
+        />
+        <button onClick={passwordReset}>Confirm password change</button>
+        <p style={{ color: "rgb(255, 0, 0)" }}>{errorResetPassword}</p>
+        <p style={{ color: "rgb(0, 112, 0)", fontSize: "14px" }}>{messageResetPassword}</p>
       </div>
 
 
