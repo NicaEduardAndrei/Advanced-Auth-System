@@ -1,5 +1,7 @@
 import axios from "axios";
 
+let refreshPromise = null
+
 const backendAPI = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL,
   withCredentials: true
@@ -18,7 +20,10 @@ backendAPI.interceptors.response.use(
     ) {
       originalRequest._retry = true
       try {
-        await backendAPI.post("/api/auth/refresh")
+        if (!refreshPromise) {
+          refreshPromise = backendAPI.post("/api/auth/refresh").finally(() => { refreshPromise = null })
+        }
+        await refreshPromise
         return backendAPI(originalRequest)
       } catch (refreshError) {
         const message = refreshError.response?.data?.message || "Something went wrong!"
