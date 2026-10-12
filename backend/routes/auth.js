@@ -473,8 +473,12 @@ router.post("/password-reset/send-code",
     async (req, res) => {
         const { email, loggedIn } = req.body
 
-        if (!email || !loggedIn) {
-            return res.status(400).json({ message: "Email and log in state required!" })
+        if (!email) {
+            return res.status(400).json({ message: "Email required!" })
+        }
+
+        if (loggedIn === undefined) {
+            return res.status(400).json({ message: "Log in state required!" })
         }
 
         const code = generateOtp()
@@ -509,7 +513,7 @@ router.post("/password-reset/send-code",
             })
         })
 
-        if (loggedIn === "true") {
+        if (loggedIn === true) {
             return res.status(200).json({ message: "Code sent!" })
         }
 
@@ -519,15 +523,15 @@ router.post("/password-reset/send-code",
 
 router.post("/password-reset", async (req, res) => {
     const { email, code, newPassword, destroySessions, loggedIn } = req.body
-    if (!loggedIn) {
+    if (loggedIn === undefined) {
         return res.status(400).json({ message: "Must provide the log in state" })
     }
 
-    if ((!email || !code || !newPassword) && loggedIn === "false") {
+    if ((!email || !code || !newPassword) && loggedIn === false) {
         return res.status(400).json({ message: "Must provide a valid email, code and password" })
     }
 
-    if ((!email || !code || !newPassword) && loggedIn === "true") {
+    if ((!email || !code || !newPassword) && loggedIn === true) {
         return res.status(400).json({ message: "Must provide a valid code and password" })
     }
 

@@ -91,7 +91,7 @@ export default function MainPage() {
 
   const sendResetCode = async () => {
     try {
-      const res = await sendPasswordResetCode(user.email, "true")
+      const res = await sendPasswordResetCode(user.email, true)
       setErrorResetPassword("")
       setMessageResetPassword(res.message)
     } catch (err) {
@@ -103,7 +103,7 @@ export default function MainPage() {
 
   const passwordReset = async () => {
     try {
-      const res = await resetPassword(user.email, passwordCode, newPassword, destroySessions, "true")
+      const res = await resetPassword(user.email, passwordCode, newPassword, destroySessions, true)
       setErrorResetPassword("")
       setMessageResetPassword(res.message)
       if (destroySessions === true) {
