@@ -1,5 +1,4 @@
 import jwt from "jsonwebtoken"
-import crypto from "crypto"
 import prisma from "./prisma.js"
 import { hashOtp } from "./otpService.js"
 
@@ -25,9 +24,13 @@ export function generatePendingToken(user) {
 }
 
 
-export function generateRefreshToken() {
-    const refreshToken = crypto.randomBytes(40).toString("hex")
-    return refreshToken
+export function generateRefreshToken(user) {
+    const token = jwt.sign(
+        {sub: user.id},
+        process.env.JWT_REFRESH_SECRET,
+        {expiresIn: "7d"}
+    )
+    return token
 }
 
 

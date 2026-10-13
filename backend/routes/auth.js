@@ -7,6 +7,7 @@ import { createSession, deletePendingToken, deleteTokensCookie, FAKE_PASSWORD_HA
 import { loginRateLimitPerEmail, loginRateLimitPerIp, sendCodeRateLimitPerIp, sendCodeRateLimitPerEmail, sendCodeCooldownLimitPerEmail, twoFactorRateLimitPerIp, twoFactorRateLimitPerId } from "../middleware/rateLimiter.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { pending2FaMiddleware } from "../middleware/pending2FaMiddleware.js";
+import { refreshTokenMiddleware } from "../middleware/refreshTokenMiddleware.js";
 import { generateSecret, verify, generateURI } from "otplib";
 import CryptoJS from "crypto-js";
 
@@ -117,7 +118,6 @@ router.post("/register", async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12)
-    const refreshToken = generateRefreshToken()
 
     const result = await prisma.$transaction(async (tx) => {
         await tx.otp.update({
@@ -136,6 +136,7 @@ router.post("/register", async (req, res) => {
             }
         })
 
+        const refreshToken = generateRefreshToken(user)
         await createSession(user, refreshToken, req, tx)
         return { user }
     })
@@ -180,7 +181,7 @@ router.post("/login",
 
         if (user.twoFactorMethod === "NONE") {
             const accessToken = generateAccessToken(user)
-            const refreshToken = generateRefreshToken()
+            const refreshToken = generateRefreshToken(user)
             await createSession(user, refreshToken, req)
             setRefreshTokenCookie(res, refreshToken)
             setAccessTokenCookie(res, accessToken)
@@ -299,7 +300,7 @@ router.post("/2fa/verify",
             })
 
             const accessToken = generateAccessToken(user)
-            const refreshToken = generateRefreshToken()
+            const refreshToken = generateRefreshToken(user)
             await createSession(user, refreshToken, req)
             setRefreshTokenCookie(res, refreshToken)
             setAccessTokenCookie(res, accessToken)
@@ -322,7 +323,7 @@ router.post("/2fa/verify",
             }
 
             const accessToken = generateAccessToken(user)
-            const refreshToken = generateRefreshToken()
+            const refreshToken = generateRefreshToken(user)
             await createSession(user, refreshToken, req)
             setRefreshTokenCookie(res, refreshToken)
             setAccessTokenCookie(res, accessToken)
@@ -384,44 +385,60 @@ router.post("/2fa/send-login-email-code",
     })
 
 
-router.post("/refresh", async (req, res) => {
-    const refreshToken = req.cookies.refreshToken
-    if (!refreshToken) {
-        return res.status(401).json({ message: "Refresh token missing" })
-    }
+router.post("/refresh", refreshTokenMiddleware, async (req, res) => {
+
+    const refreshToken = req.refreshToken
+    const userId = req.userId
 
     const session = await prisma.session.findFirst({
         where: {
             refreshToken: hashOtp(refreshToken),
-            revoked: false,
-            expiresAt: {
-                gt: new Date()
-            }
         }
     })
 
     if (!session) {
+
+        await prisma.session.updateMany({
+            where: {
+                userId: userId
+            },
+            data: {
+                revoked: true
+            }
+        })
+
+        return res.status(401).json({ message: "Invalid or expired refresh token" })
+    }
+
+    if (session.revoked || session.expiresAt < new Date()) {
         return res.status(401).json({ message: "Invalid or expired refresh token" })
     }
 
     const user = await prisma.user.findUnique({
         where: {
-            id: session.userId
+            id: userId
         }
     })
 
     const accessToken = generateAccessToken(user)
-    const newRefreshToken = generateRefreshToken()
+    const newRefreshToken = generateRefreshToken(user)
 
-    await prisma.session.update({
+    const result = await prisma.session.updateMany({
         where: {
-            refreshToken: hashOtp(refreshToken)
+            refreshToken: hashOtp(refreshToken),
+            revoked: false,
+            expiresAt: { gt: new Date() }
         },
         data: {
             refreshToken: hashOtp(newRefreshToken),
             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         }
     })
+
+    if (result.count === 0) {
+        return res.status(401).json({ message: "Invalid or expired refresh token" })
+    }
+
 
     setAccessTokenCookie(res, accessToken)
     setRefreshTokenCookie(res, newRefreshToken)
