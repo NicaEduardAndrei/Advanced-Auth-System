@@ -1,0 +1,52 @@
+.signup-container {
+    display: flex;
+    background-color: rgba(0, 0, 0, 0);
+    height: 250px;
+    box-sizing: border-box;
+    flex-direction: column;
+    justify-content: center;
+    padding: 10px;
+    gap: 10px;
+    width: 50%;
+    flex-shrink: 0;
+}
+
+.signup-container input {
+    border: none;
+    height: 20px;
+    outline: none;
+    padding: 2px 5px;
+}
+
+.email-input {
+    width: 78.5%;
+    margin-right: 10px;
+}
+
+.send-button {
+    padding: 4.5px;
+    width: 40px;
+    border: none;
+    background-color: rgb(253, 253, 253);
+}
+
+.send-button:active {
+    padding: 4.5px;
+    width: 40px;
+    border: none;
+    background-color: rgb(122, 122, 122);
+    color: white;
+    box-shadow: 0px 0px 3px black;
+}
+
+.go-to-login{
+    align-self: center;
+    margin-top: auto;
+    cursor:default;
+}
+
+.go-to-login span{
+    margin-left: 5px;
+    color: blue;
+    cursor: pointer;
+}
