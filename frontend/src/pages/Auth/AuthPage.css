@@ -1,0 +1,13 @@
+.auth-container{
+    background-color: rgba(19, 19, 19, 0.247);
+    width: 300px;
+    border-radius: 10px;
+    border: solid;
+    border-width: 0.5px;
+    overflow: hidden;
+}
+.auth-slider {
+    display: flex;
+    width: 200%;
+    transition: transform 0.3s ease;
+}
