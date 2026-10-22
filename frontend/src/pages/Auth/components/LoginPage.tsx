@@ -1,23 +1,27 @@
-import { useState } from "react"
+import { Dispatch, SetStateAction, SyntheticEvent, useState } from "react"
 import "./LoginPage.css"
 import { getMe, login, loginVia2FA, sendLoginEmailCode } from "../../../api/auth"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../../../context/AuthContext"
 
-export default function LoginPage({ setOption }) {
+type LoginPageProps = {
+    setOption: Dispatch<SetStateAction<"login" | "signup" | "resetPassword">>
+}
+
+export default function LoginPage({ setOption }: LoginPageProps) {
 
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [error, setError] = useState("")
     const [message, setMessage] = useState("")
-    const [need2FA, setNeed2FA] = useState(null)
+    const [need2FA, setNeed2FA] = useState<"email" | "totp" | "both" | "none">("none")
     const [fullBack, setFullBack] = useState(true)
     const [code, setCode] = useState("")
 
     const { setUser } = useAuth()
     const navigate = useNavigate()
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: SyntheticEvent) => {
         e.preventDefault()
         try {
             const res = await login(email, password)
@@ -40,12 +44,12 @@ export default function LoginPage({ setOption }) {
         }
         catch (err) {
             setMessage("")
-            setError(err.message)
+            setError(err instanceof Error ? err.message : "Unknown error")
         }
     }
 
     const emailMethods = {
-        handleEmail2FALogin: async (e) => {
+        handleEmail2FALogin: async (e: SyntheticEvent) => {
             e.preventDefault()
             try {
                 const res = await loginVia2FA("email", code)
@@ -57,7 +61,7 @@ export default function LoginPage({ setOption }) {
             }
             catch (err) {
                 setMessage("")
-                setError(err.message)
+                setError(err instanceof Error ? err.message : "Unknown error")
             }
         },
 
@@ -68,12 +72,12 @@ export default function LoginPage({ setOption }) {
                 setError("")
             } catch (err) {
                 setMessage("")
-                setError(err.message)
+                setError(err instanceof Error ? err.message : "Unknown error")
             }
         }
     }
 
-    const handleTotpLogin = async (e) => {
+    const handleTotpLogin = async (e: SyntheticEvent) => {
         e.preventDefault()
         try {
             const res = await loginVia2FA("totp", code)
@@ -85,14 +89,14 @@ export default function LoginPage({ setOption }) {
 
         } catch (err) {
             setMessage("")
-            setError(err.message)
+            setError(err instanceof Error ? err.message : "Unknown error")
         }
     }
 
 
     return (
         <>
-            {!need2FA && <>
+            {need2FA === "none" && <>
                 <form onSubmit={handleSubmit} className="login-container">
                     <span>Log in</span>
                     <input type="email" placeholder="email"
@@ -139,7 +143,7 @@ export default function LoginPage({ setOption }) {
                     }}>
                         Authentification app
                     </button>
-                    <button style={{ width: "50px" }} type="button" onClick={() => { setNeed2FA(null), setFullBack(true), setError(""), setMessage("") }}>BACK</button>
+                    <button style={{ width: "50px" }} type="button" onClick={() => { setNeed2FA("none"), setFullBack(true), setError(""), setMessage("") }}>BACK</button>
                 </div>
             </>}
 
@@ -166,7 +170,7 @@ export default function LoginPage({ setOption }) {
                     </div>
                     <button style={{ width: "50px" }} type="button" onClick={() => {
                         if (fullBack === true) {
-                            setNeed2FA(null)
+                            setNeed2FA("none")
                         } else {
                             setNeed2FA("both")
                         }
@@ -196,7 +200,7 @@ export default function LoginPage({ setOption }) {
                     </button>
                     <button style={{ width: "50px" }} type="button" onClick={() => {
                         if (fullBack === true) {
-                            setNeed2FA(null)
+                            setNeed2FA("none")
                         } else {
                             setNeed2FA("both")
                         }
