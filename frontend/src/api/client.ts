@@ -25,9 +25,12 @@ backendAPI.interceptors.response.use(
         }
         await refreshPromise
         return backendAPI(originalRequest)
-      } catch (refreshError:any) {
-        const message = refreshError.response?.data?.message || "Something went wrong!"
-        return Promise.reject(new Error(message))
+      } catch (refreshError) {
+        if (axios.isAxiosError(refreshError)) {
+          const message = refreshError.response?.data?.message || "Something went wrong!"
+          return Promise.reject(new Error(message))
+        }
+        return Promise.reject(new Error("Something went wrong!"))
       }
     }
     const message = error.response?.data?.message || "Something went wrong!"

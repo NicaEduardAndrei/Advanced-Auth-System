@@ -17,7 +17,7 @@ export default function AuthPage() {
         if (!isLoading && user) {
             navigate("/home")
         }
-    }, [isLoading, user])
+    }, [isLoading, user, navigate])
 
     if (isLoading) {
         return <div>Loading...</div>

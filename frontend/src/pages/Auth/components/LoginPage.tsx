@@ -143,7 +143,7 @@ export default function LoginPage({ setOption }: LoginPageProps) {
                     }}>
                         Authentification app
                     </button>
-                    <button style={{ width: "50px" }} type="button" onClick={() => { setNeed2FA("none"), setFullBack(true), setError(""), setMessage("") }}>BACK</button>
+                    <button style={{ width: "50px" }} type="button" onClick={() => { setNeed2FA("none"); setFullBack(true); setError(""); setMessage("") }}>BACK</button>
                 </div>
             </>}
 
