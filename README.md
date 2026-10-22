@@ -132,3 +132,7 @@ npm run dev
 - **pendingToken** — JWT, 5 min, used during the 2FA flow
 
 Passwords are hashed with bcrypt. TOTP secrets are encrypted with AES before storage.
+
+---
+
+> **Note:** This README was drafted with the help of an AI assistant and reviewed/edited by the author.
