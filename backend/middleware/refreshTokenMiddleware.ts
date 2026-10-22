@@ -1,7 +1,8 @@
 import jwt from "jsonwebtoken"
+import type { NextFunction, Request, Response } from "express"
+import { config } from "../utils/config.js"
 
-
-export function refreshTokenMiddleware(req, res, next) {
+export function refreshTokenMiddleware(req: Request, res: Response, next: NextFunction) {
     try {
         const token = req.cookies.refreshToken
 
@@ -9,9 +10,9 @@ export function refreshTokenMiddleware(req, res, next) {
             return res.status(401).json({ message: "A valid token is required" })
         }
 
-        const jwtToken = jwt.verify(token, process.env.JWT_REFRESH_SECRET)
+        const jwtToken = jwt.verify(token, config.jwtRefreshSecret)
 
-        if (!jwtToken.sub) {
+        if (typeof jwtToken === "string" || !jwtToken.sub) {
             return res.status(401).json({ message: "A valid token is required" })
         }
 

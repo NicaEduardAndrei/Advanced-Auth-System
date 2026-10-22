@@ -10,6 +10,7 @@ import { pending2FaMiddleware } from "../middleware/pending2FaMiddleware.js";
 import { refreshTokenMiddleware } from "../middleware/refreshTokenMiddleware.js";
 import { generateSecret, verify, generateURI } from "otplib";
 import CryptoJS from "crypto-js";
+import { config } from "../utils/config.js";
 
 const router = Router();
 
@@ -69,6 +70,7 @@ router.post("/register/send-code",
 
 router.post("/register", async (req, res) => {
     const { email, password, code } = req.body
+    let refreshToken = ""
 
     if (!email || !password || !code) {
         return res.status(400).json({ message: "Must provide email, password and code" })
@@ -136,7 +138,7 @@ router.post("/register", async (req, res) => {
             }
         })
 
-        const refreshToken = generateRefreshToken(user)
+        refreshToken = generateRefreshToken(user)
         await createSession(user, refreshToken, req, tx)
         return { user }
     })
@@ -256,6 +258,10 @@ router.post("/2fa/verify",
             }
         })
 
+        if (!user) {
+            return res.status(400).json({ message: "A valid token is required" })
+        }
+
         if (method === "email" && (user.twoFactorMethod === "BOTH" || user.twoFactorMethod === "EMAIL")) {
             const otp = await prisma.otp.findFirst({
                 where: {
@@ -314,7 +320,7 @@ router.post("/2fa/verify",
                 return res.status(400).json({ message: "Invalid code" })
             }
 
-            const decryptedSecret = CryptoJS.AES.decrypt(user.totpSecret, process.env.TOTP_SECRET).toString(CryptoJS.enc.Utf8)
+            const decryptedSecret = CryptoJS.AES.decrypt(user.totpSecret, config.totpSecret).toString(CryptoJS.enc.Utf8)
 
             const result = await verify({ token: code, secret: decryptedSecret, epochTolerance: 30 })
 
@@ -348,6 +354,11 @@ router.post("/2fa/send-login-email-code",
                 id: userId
             }
         })
+
+        if (!user) {
+            return res.status(400).json({ message: "A valid token is required" })
+        }
+
         if (user.twoFactorMethod !== "EMAIL" && user.twoFactorMethod !== "BOTH") {
             return res.status(400).json({ message: "Email 2FA is not enabled for this account" })
         }
@@ -390,6 +401,10 @@ router.post("/refresh", refreshTokenMiddleware, async (req, res) => {
     const refreshToken = req.refreshToken
     const userId = req.userId
 
+    if(!refreshToken){
+        return res.status(401).json({ message: "A valid refresh token is required" })
+    }
+
     const session = await prisma.session.findFirst({
         where: {
             refreshToken: hashOtp(refreshToken),
@@ -419,6 +434,10 @@ router.post("/refresh", refreshTokenMiddleware, async (req, res) => {
             id: userId
         }
     })
+
+    if (!user) {
+        return res.status(400).json({ message: "A valid token is required" })
+    }
 
     const accessToken = generateAccessToken(user)
     const newRefreshToken = generateRefreshToken(user)
@@ -652,6 +671,11 @@ router.post("/2fa/enable",
             }
         })
 
+        if (!user) {
+            return res.status(400).json({ message: "A valid token is required" })
+        }
+
+
         if (method === "email") {
             if (user.twoFactorMethod === "EMAIL" || user.twoFactorMethod === "BOTH") {
                 return res.status(409).json({ message: "Email 2FA already enabled" })
@@ -696,7 +720,7 @@ router.post("/2fa/enable",
             }
 
             const secret = generateSecret()
-            const encryptedSecret = CryptoJS.AES.encrypt(secret, process.env.TOTP_SECRET).toString()
+            const encryptedSecret = CryptoJS.AES.encrypt(secret, config.totpSecret).toString()
             const URI = generateURI({
                 secret,
                 label: user.email,
@@ -733,6 +757,10 @@ router.post("/2fa/confirm-2fa-totp-enable",
             }
         })
 
+        if (!user) {
+            return res.status(400).json({ message: "A valid token is required" })
+        }
+
         if (!user.totpSecret) {
             return res.status(400).json({ message: "Missing totp key, must request totp enable first" })
         }
@@ -743,7 +771,7 @@ router.post("/2fa/confirm-2fa-totp-enable",
             return res.status(409).json({ message: "Totp 2FA already enabled" })
         }
 
-        const decryptedSecret = CryptoJS.AES.decrypt(user.totpSecret, process.env.TOTP_SECRET).toString(CryptoJS.enc.Utf8)
+        const decryptedSecret = CryptoJS.AES.decrypt(user.totpSecret, config.totpSecret).toString(CryptoJS.enc.Utf8)
 
         const result = await verify({ token: code, secret: decryptedSecret, epochTolerance: 30 })
 
@@ -793,6 +821,11 @@ router.post("/2fa/confirm-2fa-email-enable",
                 id: userId
             }
         })
+
+        if (!user) {
+            return res.status(400).json({ message: "A valid token is required" })
+        }
+
 
         if (user.twoFactorMethod === "BOTH") {
             return res.status(409).json({ message: "Both 2FA methods already enabled" })

@@ -1,9 +1,10 @@
 import { Resend } from "resend";
+import { config } from "./config.js";
+import type { OtpPurpose } from "@prisma/client";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(config.resendApiKey);
 
-
-export async function sendOtpEmail(toEmail, otpCode, purpose) {
+export async function sendOtpEmail(toEmail: string, otpCode: string, purpose: OtpPurpose) {
     let subject = ""
     let title = ""
     if (purpose === "EMAIL_REGISTER_VERIFY") {
