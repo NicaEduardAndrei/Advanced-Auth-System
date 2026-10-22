@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "node --watch server.js",
-    "start": "node server.js",
+    "dev": "tsx watch server.ts",
+    "start": "tsx server.ts",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [],
