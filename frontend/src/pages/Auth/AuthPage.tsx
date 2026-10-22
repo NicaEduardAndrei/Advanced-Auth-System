@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom"
 
 export default function AuthPage() {
 
-    const [option, setOption] = useState("login")
+    const [option, setOption] = useState<"login" | "signup" | "resetPassword">("login")
     const { user, isLoading } = useAuth()
     const navigate = useNavigate()
 
@@ -17,8 +17,7 @@ export default function AuthPage() {
         if (!isLoading && user) {
             navigate("/home")
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isLoading, user])
+    }, [isLoading, user, navigate])
 
     if (isLoading) {
         return <div>Loading...</div>
@@ -27,11 +26,11 @@ export default function AuthPage() {
     return (
         <div className="auth-container">
             {option === "resetPassword" ? <>
-                <ResetPasswordPage option={option} setOption={setOption} />
+                <ResetPasswordPage setOption={setOption} />
             </> : <>
                 <div className="auth-slider" style={{ transform: option === "login" ? "translateX(0)" : "translateX(-50%)" }}>
-                    <LoginPage option={option} setOption={setOption} />
-                    <SignUpPage option={option} setOption={setOption} />
+                    <LoginPage setOption={setOption} />
+                    <SignUpPage setOption={setOption} />
                 </div>
             </>}
         </div>

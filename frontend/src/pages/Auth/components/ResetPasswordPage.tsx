@@ -1,8 +1,12 @@
-import { useState } from "react"
+import { SetStateAction, useState, Dispatch, SyntheticEvent } from "react"
 import "./ResetPasswordPage.css"
 import { resetPassword, sendPasswordResetCode } from "../../../api/auth"
 
-export default function ResetPasswordPage({ setOption }) {
+type ResetPasswordPageProps = {
+    setOption : Dispatch<SetStateAction<"login" | "signup" | "resetPassword">> 
+}
+
+export default function ResetPasswordPage({ setOption }: ResetPasswordPageProps) {
 
     const [email, setEmail] = useState("")
     const [code, setCode] = useState("")
@@ -19,11 +23,11 @@ export default function ResetPasswordPage({ setOption }) {
             setMessage(res.message)
         } catch (err) {
             setMessage("")
-            setError(err.message)
+            setError(err instanceof Error ? err.message : "Unknown error")
         }
     }
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e : SyntheticEvent) => {
         e.preventDefault()
         try {
             const res = await resetPassword(email, code, newPassword, true, false)
@@ -32,7 +36,7 @@ export default function ResetPasswordPage({ setOption }) {
             setMessage(res.message)
         } catch (err) {
             setMessage("")
-            setError(err.message)
+            setError(err instanceof Error ? err.message : "Unknown error")
         }
     }
 

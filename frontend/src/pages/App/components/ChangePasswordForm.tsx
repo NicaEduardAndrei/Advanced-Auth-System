@@ -6,7 +6,7 @@ import { useAuth } from "../../../context/AuthContext"
 
 export default function ChangePasswordForm() {
 
-    const {user, setUser} = useAuth()
+    const { user, setUser } = useAuth()
 
     const navigate = useNavigate()
 
@@ -21,28 +21,32 @@ export default function ChangePasswordForm() {
 
     const sendResetCode = async () => {
         try {
-            const res = await sendPasswordResetCode(user.email, true)
-            setErrorResetPassword("")
-            setMessageResetPassword(res.message)
+            if (user) {
+                const res = await sendPasswordResetCode(user.email, true)
+                setErrorResetPassword("")
+                setMessageResetPassword(res.message)
+            }
         } catch (err) {
             setMessageResetPassword("")
-            setErrorResetPassword(err.message)
+            setErrorResetPassword(err instanceof Error ? err.message : "Unknown error")
         }
 
     }
 
     const passwordReset = async () => {
         try {
-            const res = await resetPassword(user.email, passwordCode, newPassword, destroySessions, true)
-            setErrorResetPassword("")
-            setMessageResetPassword(res.message)
-            if (destroySessions === true) {
-                setUser(null)
-                navigate("/")
+            if (user) {
+                const res = await resetPassword(user.email, passwordCode, newPassword, destroySessions, true)
+                setErrorResetPassword("")
+                setMessageResetPassword(res.message)
+                if (destroySessions === true) {
+                    setUser(null)
+                    navigate("/")
+                }
             }
         } catch (err) {
             setMessageResetPassword("")
-            setErrorResetPassword(err.message)
+            setErrorResetPassword(err instanceof Error ? err.message : "Unknown error")
         }
     }
 
@@ -60,7 +64,6 @@ export default function ChangePasswordForm() {
                 <div>
                     <span>Logout everywhere?</span>
                     <input type="checkbox" checked={destroySessions}
-                        value={destroySessions}
                         onChange={() => { setDestroySessions(!destroySessions) }}
                     />
                 </div>

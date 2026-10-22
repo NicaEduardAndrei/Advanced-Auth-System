@@ -1,11 +1,15 @@
-import { useState } from "react"
+import { Dispatch, MouseEvent, SetStateAction, SyntheticEvent, useState } from "react"
 import { register, registerEmailCode, getMe } from "../../../api/auth"
 import { useAuth } from "../../../context/AuthContext"
 import { useNavigate } from "react-router-dom"
-
 import "./SignUpPage.css"
 
-export default function SignUpPage({ setOption }) {
+type SignUpPageProps = {
+    setOption: Dispatch<SetStateAction<"login" | "signup" | "resetPassword">>
+}
+
+
+export default function SignUpPage({ setOption }: SignUpPageProps) {
 
     const [email, setEmail] = useState("")
     const [code, setCode] = useState("")
@@ -15,9 +19,9 @@ export default function SignUpPage({ setOption }) {
     const [codeSent, setCodeSent] = useState(false)
 
     const navigate = useNavigate()
-    const {setUser} = useAuth()
+    const { setUser } = useAuth()
 
-    const handleSendCode = async (e) => {
+    const handleSendCode = async (e: MouseEvent<HTMLButtonElement>) => {
         e.preventDefault()
         try {
             const res = await registerEmailCode(email)
@@ -27,12 +31,12 @@ export default function SignUpPage({ setOption }) {
         }
         catch (err) {
             setMessage("")
-            setError(err.message)
+            setError(err instanceof Error ? err.message : "Unknown error");
         }
 
     }
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: SyntheticEvent) => {
         e.preventDefault()
         try {
             const res = await register(email, password, code)
@@ -44,7 +48,7 @@ export default function SignUpPage({ setOption }) {
         }
         catch (err) {
             setMessage("")
-            setError(err.message)
+            setError(err instanceof Error ? err.message : "Unknown error")
         }
     }
 
