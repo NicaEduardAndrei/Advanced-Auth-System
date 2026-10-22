@@ -1,8 +1,8 @@
-import axios from "axios";
+import axios, { AxiosInstance } from "axios";
 
-let refreshPromise = null
+let refreshPromise: Promise<unknown> | null = null
 
-const backendAPI = axios.create({
+const backendAPI: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL,
   withCredentials: true
 })
@@ -25,7 +25,7 @@ backendAPI.interceptors.response.use(
         }
         await refreshPromise
         return backendAPI(originalRequest)
-      } catch (refreshError) {
+      } catch (refreshError:any) {
         const message = refreshError.response?.data?.message || "Something went wrong!"
         return Promise.reject(new Error(message))
       }
