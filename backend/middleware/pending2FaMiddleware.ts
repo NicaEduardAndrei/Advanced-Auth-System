@@ -1,15 +1,22 @@
 import jwt from "jsonwebtoken"
 import prisma from "../utils/prisma.js"
+import type { NextFunction, Request, Response } from "express"
+import { config } from "../utils/config.js"
 
-export async function authMiddleware(req, res, next) {
+export async function pending2FaMiddleware(req: Request, res: Response, next: NextFunction) {
     try {
 
-        const token = req.cookies.accessToken
+        const token = req.cookies.pendingToken
+
         if (!token) {
             return res.status(401).json({ message: "A valid token is required" })
         }
 
-        const jwtToken = jwt.verify(token, process.env.JWT_ACCESS_SECRET)
+        const jwtToken = jwt.verify(token, config.jwtPendingSecret)
+
+        if(typeof jwtToken === "string" || !jwtToken.sub){
+            return res.status(401).json({ message: "A valid token is required" })
+        }
 
         const user = await prisma.user.findUnique({
             where: {
@@ -17,13 +24,15 @@ export async function authMiddleware(req, res, next) {
             }
         })
 
-        if (!user || jwtToken.tokenVersion !== user.tokenVersion) {
+        if (!user || user.tokenVersion !== jwtToken.tokenVersion) {
             return res.status(401).json({ message: "A valid token is required" })
         }
+
         req.userId = jwtToken.sub
         next()
 
     } catch (error) {
         return res.status(401).json({ message: "A valid token is required" })
     }
+
 }
