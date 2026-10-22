@@ -1,40 +1,44 @@
 import jwt from "jsonwebtoken"
 import prisma from "./prisma.js"
 import { hashOtp } from "./otpService.js"
+import type { Request, Response } from "express";
+import type { Prisma, User } from "@prisma/client";
+import { config } from "./config.js";
+
 
 export const FAKE_PASSWORD_HASH = "$2b$12$8u8Yp7qfV9mHq3yTg2a0uO1aCjV8qf8iYp8xFfV3ZrYgE.4m7t1gVx0t"
 
-export function generateAccessToken(user) {
+export function generateAccessToken(user: User) {
 
     const token = jwt.sign(
         { sub: user.id, tokenVersion: user.tokenVersion },
-        process.env.JWT_ACCESS_SECRET,
+        config.jwtAccessSecret,
         { expiresIn: "15m" }
     )
     return token
 }
 
-export function generatePendingToken(user) {
+export function generatePendingToken(user: User) {
     const token = jwt.sign(
         { sub: user.id, tokenVersion: user.tokenVersion },
-        process.env.JWT_PENDING_SECRET,
+        config.jwtPendingSecret,
         { expiresIn: "5m" }
     )
     return token
 }
 
 
-export function generateRefreshToken(user) {
+export function generateRefreshToken(user: User) {
     const token = jwt.sign(
-        {sub: user.id},
-        process.env.JWT_REFRESH_SECRET,
-        {expiresIn: "7d"}
+        { sub: user.id },
+        config.jwtRefreshSecret,
+        { expiresIn: "7d" }
     )
     return token
 }
 
 
-export async function createSession(user, refreshToken, req, tx) {
+export async function createSession(user: User, refreshToken: string, req: Request, tx?: Prisma.TransactionClient) {
     const hashedRefreshToken = hashOtp(refreshToken)
     const ip = req.ip
     const userAgent = req.headers["user-agent"]
@@ -55,7 +59,7 @@ export async function createSession(user, refreshToken, req, tx) {
 }
 
 
-export function setRefreshTokenCookie(res, refreshToken) {
+export function setRefreshTokenCookie(res: Response, refreshToken: string) {
     res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -66,7 +70,7 @@ export function setRefreshTokenCookie(res, refreshToken) {
 }
 
 
-export function setPendingTokenCookie(res, pendingToken) {
+export function setPendingTokenCookie(res: Response, pendingToken: string) {
     res.cookie("pendingToken", pendingToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -77,7 +81,7 @@ export function setPendingTokenCookie(res, pendingToken) {
 }
 
 
-export function setAccessTokenCookie(res, accessToken) {
+export function setAccessTokenCookie(res: Response, accessToken: string) {
     res.cookie("accessToken", accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -88,7 +92,7 @@ export function setAccessTokenCookie(res, accessToken) {
 }
 
 
-export function deleteTokensCookie(res) {
+export function deleteTokensCookie(res: Response) {
     res.clearCookie("accessToken", {
         path: "/",
         sameSite: "lax",
@@ -109,7 +113,7 @@ export function deleteTokensCookie(res) {
 }
 
 
-export function deletePendingToken(res){
+export function deletePendingToken(res: Response) {
     res.clearCookie("pendingToken", {
         path: "/",
         sameSite: "lax",
