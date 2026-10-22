@@ -2,6 +2,9 @@ import { useState } from "react"
 import { requestEnable2FA, enableEmail2FA, enableTotp2FA } from "../../../api/auth"
 import { QRCodeSVG } from 'qrcode.react'
 
+
+type Method = "email" | "totp"
+
 export default function Enable2FAForm() {
     const [URI, setURI] = useState("")
     const [secret, setSecret] = useState("")
@@ -14,32 +17,32 @@ export default function Enable2FAForm() {
     const [errorTotp2FA, setErrorTotp2FA] = useState("")
     const [messageTotp2FA, setMessageTotp2FA] = useState("")
 
-    const enable2FA = async (method) => {
+    const enable2FA = async (method: Method) => {
         try {
             const res = await requestEnable2FA(method)
             if (method === "email") {
                 setErrorEmail2FA("")
-                setMessageEmail2FA(res.message)
+                setMessageEmail2FA(res.message ?? "")
             } else {
                 setErrorTotp2FA("")
                 setMessageTotp2FA("Scan the code below or put the code in your auth app")
                 setURI(res.URI)
-                setSecret(new URLSearchParams(res.URI.split('?')[1]).get('secret'))
+                setSecret(new URLSearchParams(res.URI.split('?')[1]).get('secret') ?? "")
             }
         }
         catch (err) {
             if (method === "email") {
                 setMessageEmail2FA("")
-                setErrorEmail2FA(err.message)
+                setErrorEmail2FA(err instanceof Error ? err.message : "Unknown error")
             } else {
                 setMessageTotp2FA("")
-                setErrorTotp2FA(err.message)
+                setErrorTotp2FA(err instanceof Error ? err.message : "Unknown error")
             }
 
         }
     }
 
-    const confirm2FA = async (method, code) => {
+    const confirm2FA = async (method: Method, code: string) => {
         try {
             if (method === "email") {
                 const res = await enableEmail2FA(code)
@@ -53,10 +56,10 @@ export default function Enable2FAForm() {
         } catch (err) {
             if (method === "email") {
                 setMessageEmail2FA("")
-                setErrorEmail2FA(err.message)
+                setErrorEmail2FA(err instanceof Error ? err.message : "Unknown error")
             } else if (method === "totp") {
                 setMessageTotp2FA("")
-                setErrorTotp2FA(err.message)
+                setErrorTotp2FA(err instanceof Error ? err.message : "Unknown error")
             }
         }
     }
@@ -100,7 +103,7 @@ export default function Enable2FAForm() {
                         <p style={{ fontSize: "15px" }}>{secret}</p>
                     </> :
                         <>
-                            <QRCodeSVG size={100} style={{ marginLeft: "90px", marginTop: "15px", filter: "blur(4px)" }} />
+                            <QRCodeSVG value={"fake"} size={100} style={{ marginLeft: "90px", marginTop: "15px", filter: "blur(4px)" }} />
                         </>}
                 </div>
             </div>
