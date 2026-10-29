@@ -19,7 +19,7 @@ router.post("/register/send-code",
     sendCodeRateLimitPerEmail(),
     sendCodeCooldownLimitPerEmail(),
     async (req, res) => {
-        const { email } = req.body
+        const { email }: { email: string } = req.body
 
         if (!email) {
             return res.status(400).json({ message: "Email required!" })
@@ -69,7 +69,7 @@ router.post("/register/send-code",
 
 
 router.post("/register", async (req, res) => {
-    const { email, password, code } = req.body
+    const { email, password, code }: { email: string, password: string, code: string } = req.body
     let refreshToken = ""
 
     if (!email || !password || !code) {
@@ -162,7 +162,7 @@ router.post("/login",
     loginRateLimitPerIp(),
     loginRateLimitPerEmail(), async (req, res) => {
 
-        const { email, password } = req.body
+        const { email, password }: { email: string, password: string } = req.body
 
         if (!email || !password) {
             return res.status(400).json({ message: "Email and password are required" })
@@ -246,7 +246,7 @@ router.post("/2fa/verify",
     twoFactorRateLimitPerId(),
     twoFactorRateLimitPerIp(),
     async (req, res) => {
-        const { method, code } = req.body
+        const { method, code }: { method: "totp" | "email", code: string } = req.body
 
         if (!method || !code) {
             return res.status(400).json({ message: "Provide a valid method and a valid code" })
@@ -401,7 +401,7 @@ router.post("/refresh", refreshTokenMiddleware, async (req, res) => {
     const refreshToken = req.refreshToken
     const userId = req.userId
 
-    if(!refreshToken){
+    if (!refreshToken) {
         return res.status(401).json({ message: "A valid refresh token is required" })
     }
 
@@ -467,7 +467,7 @@ router.post("/refresh", refreshTokenMiddleware, async (req, res) => {
 
 
 router.post("/logout", async (req, res) => {
-    const refreshToken = req.cookies.refreshToken
+    const refreshToken: string = req.cookies.refreshToken
 
     if (!refreshToken) {
         return res.status(200).json({ message: "Logged out successfully" })
@@ -507,7 +507,7 @@ router.post("/password-reset/send-code",
     sendCodeRateLimitPerEmail(),
     sendCodeCooldownLimitPerEmail(),
     async (req, res) => {
-        const { email, loggedIn } = req.body
+        const { email, loggedIn }: { email: string, loggedIn: boolean } = req.body
 
         if (!email) {
             return res.status(400).json({ message: "Email required!" })
@@ -517,9 +517,19 @@ router.post("/password-reset/send-code",
             return res.status(400).json({ message: "Log in state required!" })
         }
 
+        const user = await prisma.user.findUnique({
+            where: {
+                email: email
+            }
+        })
+
         const code = generateOtp()
         const hash = hashOtp(code)
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+
+        if (!user) {
+            return res.status(200).json({ message: "If this email exists, you will receive a reset code" })
+        }
 
         const { data, error: emailError } = await sendOtpEmail(email, code, "EMAIL_PASSWORD_RESET");
 
@@ -542,6 +552,7 @@ router.post("/password-reset/send-code",
             await tx.otp.create({
                 data: {
                     email: email,
+                    userId: user.id,
                     purpose: "EMAIL_PASSWORD_RESET",
                     tokenHash: hash,
                     expiresAt: expiresAt
@@ -558,7 +569,8 @@ router.post("/password-reset/send-code",
 
 
 router.post("/password-reset", async (req, res) => {
-    const { email, code, newPassword, destroySessions, loggedIn } = req.body
+    const { email, code, newPassword, destroySessions, loggedIn }: { email: string, code: string, newPassword: string, destroySessions: boolean, loggedIn: boolean } = req.body
+
     if (loggedIn === undefined) {
         return res.status(400).json({ message: "Must provide the log in state" })
     }
@@ -584,7 +596,7 @@ router.post("/password-reset", async (req, res) => {
             }
         }
     })
-    if (!otp) {
+    if (!otp || !otp.userId) {
         return res.status(400).json({ message: "Invalid or expired code" })
     }
 
@@ -659,7 +671,7 @@ router.post("/2fa/enable",
     twoFactorRateLimitPerIp(),
     async (req, res) => {
         const userId = req.userId
-        const { method } = req.body
+        const { method }: { method: "totp" | "email" } = req.body
 
         if (!method || (method != "email" && method != "totp")) {
             return res.status(400).json({ message: "Must provide a valid method" })
@@ -746,7 +758,7 @@ router.post("/2fa/confirm-2fa-totp-enable",
     twoFactorRateLimitPerIp(),
     async (req, res) => {
         const userId = req.userId
-        const { code } = req.body
+        const { code }: { code: string } = req.body
 
         if (!code) {
             return res.status(400).json({ message: "Invalid code" })
@@ -811,7 +823,7 @@ router.post("/2fa/confirm-2fa-email-enable",
     twoFactorRateLimitPerIp(),
     async (req, res) => {
         const { userId } = req
-        const { code } = req.body
+        const { code }: { code: string } = req.body
 
         if (!code) {
             return res.status(400).json({ message: "Invalid code" })
